@@ -73,4 +73,82 @@ public class IndexModel : PageModel
         }
         return Page();
     }
+
+    public IActionResult OnPostUploadXml(IFormFile xmlFile)
+    {
+        if (xmlFile != null && xmlFile.Length > 0)
+        {
+            try
+            {
+                // Get the XSD file path
+                string xsdFilePath = Path.Combine(Directory.GetCurrentDirectory(), "ucastnici.xsd");
+
+                // Validate XML against XSD
+                string errorString = "";
+                bool isValid = ValidateXmlAgainstXsd(xmlFile.OpenReadStream(), xsdFilePath, ref errorString);
+
+                if (isValid)
+                {
+                    TempData["result"] = $"XML je valídny podľa XSD schémy.";
+                }
+                else
+                {
+                    TempData["result"] = $"XML nie je valídny podľa XSD schémy. {errorString}";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["result"] = $"Chyba: {ex.Message}";
+            }
+        }
+        else
+        {
+            TempData["result"] = "Vyberte platný XML súbor.";
+        }
+
+        return Page();
+    }
+
+    public bool ValidateXmlAgainstXsd(Stream xmlStream, string xsdFilePath, ref string errorString)
+    {
+        try
+        {
+            // Load the XSD schema
+            XmlSchemaSet schemas = new XmlSchemaSet();
+            schemas.Add("SIPVS_I_NT_ucastnici_skupina_6", XmlReader.Create(new StreamReader(xsdFilePath)));
+
+            // Load the XML stream with validation settings
+            XmlReaderSettings settings = new XmlReaderSettings();
+            settings.ValidationType = ValidationType.Schema;
+            settings.Schemas = schemas;
+
+            // Validate the XML against the XSD schema
+            using (XmlReader reader = XmlReader.Create(xmlStream, settings))
+            {
+                while (reader.Read()) { }
+            }
+
+            // If validation succeeds, return true
+            return true;
+        }
+        catch (XmlSchemaValidationException ex)
+        {
+            // Validation failed, print the validation error if needed
+            // Console.WriteLine($"Validation error: {ex.Message}");
+            errorString = ex.Message;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            // Other exceptions, handle them as needed
+            // Console.WriteLine($"Error: {ex.Message}");
+            errorString = ex.Message;
+            return false;
+        }
+        finally
+        {
+            // Close the XML stream
+            xmlStream.Close();
+        }
+    }
 }

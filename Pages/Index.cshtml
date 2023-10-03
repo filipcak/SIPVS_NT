@@ -23,7 +23,17 @@
             alert(message);
         }
     </script>
+    <h2 class="display-5">Nahraj XML súbor a porovnaj s XSD</h2>
+    <form method="post" asp-page-handler="UploadXml" enctype="multipart/form-data">
+        <input id="file-upload" type="file" name="xmlFile" accept=".xml" required />
+        <button type="submit">Porovnaj</button>
+    </form>
+    @if (TempData["result"] != null)
+    {
+        <div>@TempData["result"]</div>
+    }
 </div>
+
 
 @Html.HiddenFor(model => model.FormData.Title)
 @Html.HiddenFor(model => model.FormData.Year)
