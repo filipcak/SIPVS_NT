@@ -1,11 +1,37 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Formulár";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome to test page for SIPVS course</h1>
-    <p>Place .xml form here :D </p>
+    <h1 class="display-4">Návrh formulára pre SIPVS </h1>
+    <form method="post">
+        <label for="title">Názov: </label>
+        <input type="text" id="title" name="title" required><br>
+        
+        <label for="year">Rok: </label>
+        <input type="number" id="year" name="year" required><br>
+        
+        <label for="duration">Dĺžka filmu: </label>
+        <input type="time" id="duration" name="duration" required><br>
+        
+        <button type="submit">Odoslať</button>
+    </form>
+    <script>
+        function showPopup(message) {
+            alert(message);
+        }
+    </script>
 </div>
 
+@Html.HiddenFor(model => model.FormData.Title)
+@Html.HiddenFor(model => model.FormData.Year)
+@Html.HiddenFor(model => model.FormData.Duration)
+
+@if (ViewData["PopupMessage"] != null)
+{
+    <script>
+        showPopup('@ViewData["PopupMessage"]');
+    </script>
+}
