@@ -3,37 +3,118 @@
 @{
     ViewData["Title"] = "Formulár";
 }
+<!DOCTYPE html>
+<html>
+<head>
+<title>Formulár pre účastníkov</title>
+</head>
 
-<div class="text-center">
-    <h1 class="display-4">Návrh formulára pre SIPVS </h1>
-    <form method="post">
-        <label for="title">Názov: </label>
-        <input type="text" id="title" name="title" required><br>
-        
-        <label for="year">Rok: </label>
-        <input type="number" id="year" name="year" required><br>
-        
-        <label for="duration">Dĺžka filmu: </label>
-        <input type="time" id="duration" name="duration" required><br>
-        
-        <button type="submit">Odoslať</button>
-    </form>
-    <script>
-        function showPopup(message) {
-            alert(message);
-        }
-    </script>
+<form action="/submit" method="post">
+
+<fieldset>
+<legend>Účastníci</legend>
+
+<ul id="ucastnici">
+    <li>
+      <label for="ucastnik_1_meno">Meno:</label>
+      <input type="text" name="ucastnik[1][meno]" id="ucastnik_1_meno" required pattern="^[a-zA-Z]+$">
+    </li>
+    <li>
+      <label for="ucastnik_1_priezvisko">Priezvisko:</label>
+      <input type="text" name="ucastnik[1][priezvisko]" id="ucastnik_1_priezvisko" required pattern="^[a-zA-Z]+$">
+    </li>
+    <li>
+      <label for="ucastnik_1_datum_narodenia">Dátum narodenia:</label>
+      <input type="date" name="ucastnik[1][datum_narodenia]" id="ucastnik_1_datum_narodenia" required>
+    </li>
+    <li>
+      <label for="ucastnik_1_vek">Vek:</label>
+      <input type="number" name="ucastnik[1][vek]" id="ucastnik_1_vek" required min="1">
+    </li>
+    <li>
+      <label for="ucastnik_1_email">E-mail:</label>
+      <input type="email" name="ucastnik[1][email]" id="ucastnik_1_email" placeholder="me@example.com" required>
+    </li>
+
+</ul>
+
+<button type="button" id="pridat-ucastnika">Pridať účastníka</button>
+
+<ul id="ucastnici-ostatne">
+
+</ul>
+
+<button type="submit" id="odoslat-posledny-ucastnik">Odoslať</button>
+
+</fieldset>
+</form>
+<script>
+
+// počiatočná hodnota počtu účastníkov
+let pocet_ucastnikov = 1;
+
+// funkcia na pridanie nového účastníka
+function pridatUcastnika() {
+  
+  // kontrola, či je počet účastníkov menší ako 10
+  if (pocet_ucastnikov >= 10) {
+    // zablokovanie tlačidla "Pridať účastníka"
+    event.preventDefault();
+    
+    // zobrazenie správy
+    alert("Maximálny počet účastníkov je 10.");
+    return;
+  } 
+  
+  // vytvorenie nového prvku <li>
+  let novyUcastnik = document.createElement("li");
+
+  // pridanie potrebných polí
+  novyUcastnik.innerHTML = `
+  <h2>Pridaný účastník {{pocet_ucastnikov}}</h2>
+  
+  <label for="ucastnik_{{pocet_ucastnikov}}_meno">Meno:</label>
+  <input type="text" name="ucastnik[{{pocet_ucastnikov}}][meno]" id="ucastnik_{{pocet_ucastnikov}}_meno" required pattern="^[a-zA-Z]+$">
+  <label for="ucastnik_{{pocet_ucastnikov}}_priezvisko">Priezvisko:</label>
+  <input type="text" name="ucastnik[{{pocet_ucastnikov}}][priezvisko]" id="ucastnik_{{pocet_ucastnikov}}_priezvisko" required pattern="^[a-zA-Z]+$">
+  <label for="ucastnik_{{pocet_ucastnikov}}_datum_narodenia">Dátum narodenia:</label>
+  <input type="date" name="ucastnik[{{pocet_ucastnikov}}][datum_narodenia]" id="ucastnik_{{pocet_ucastnikov}}_datum_narodenia" required>
+  <label for="ucastnik_{{pocet_ucastnikov}}_vek">Vek:</label>
+  <input type="number" name="ucastnik[{{pocet_ucastnikov}}][vek]" id="ucastnik_{{pocet_ucastnikov}}_vek" required min="1">
+  <label for="ucastnik_{{pocet_ucastnikov}}_email">E-mail:</label>
+  <input type="email" name="ucastnik[{{pocet_ucastnikov}}][email]" id="ucastnik_{{pocet_ucastnikov}}_email" placeholder="me@example.com" required>
+  `;
+
+  // pridanie nového prvku na koniec zoznamu
+  document.getElementById("ucastnici").appendChild(novyUcastnik);
+
+  // nastavenie textu nadpisu
+  novyUcastnik.querySelector("h2").textContent = "Pridaný účastník " + pocet_ucastnikov;
+  
+  // zvýšenie počtu účastníkov
+  pocet_ucastnikov++;
+}
+
+document.getElementById("pridat-ucastnika").addEventListener("click", pridatUcastnika);
+
+
+// funkcia na spracovanie udalosti kliknutia na tlačidlo "Odoslať"
+
+// priradenie udalosti kliknutia na tlačidlo "Odoslať"
+document.getElementById("odoslat-posledny-ucastnik").addEventListener("click", spracujOdoslanie);
+
+</script>
+
     <h2 class="display-5">Nahraj XML súbor a porovnaj s XSD</h2>
     <form method="post" asp-page-handler="UploadXml" enctype="multipart/form-data">
         <input id="file-upload" type="file" name="xmlFile" accept=".xml" required />
         <button type="submit">Porovnaj</button>
     </form>
+
     @if (TempData["result"] != null)
     {
         <div>@TempData["result"]</div>
     }
-</div>
-
 
 @Html.HiddenFor(model => model.FormData.Title)
 @Html.HiddenFor(model => model.FormData.Year)
