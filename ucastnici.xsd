@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
-<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="1.0" elementFormDefault="qualified" targetNamespace="SIPVS_I_NT_ucastnici_skupina_6">
-	<xsd:element name="ucastnici" type="UcastniciTyp"/>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="1.0" elementFormDefault="qualified" targetNamespace="SIPVS_I_NT_ucastnici_skupina_6"
+			xmlns="SIPVS_I_NT_ucastnici_skupina_6">
+	<xsd:element name="ucastnici" type="UcastniciTyp" />
 	<xsd:complexType name="UcastniciTyp">
 		<xsd:sequence>
 			<xsd:element name="ucastnik" minOccurs="1" maxOccurs="10" type="UcastnikTyp"/>

@@ -9,68 +9,79 @@ namespace SIPVS_NT.Pages;
 public class IndexModel : PageModel
 {
     private readonly ILogger<IndexModel> _logger;
-
+    
     public IndexModel(ILogger<IndexModel> logger)
     {
         _logger = logger;
-        FormData = new FormModel(); 
     }
-
-    public void OnGet()
-    { }
     
-    [BindProperty]
-    public FormModel FormData { get; set; }
-
+    public void OnGet()
+    {
+    }
+    
     public IActionResult OnPost()
     {
         if (ModelState.IsValid)
         {
-            XmlSchemaSet schemaSet = new XmlSchemaSet();
-            schemaSet.Add(null, "filmy.xsd"); 
-            schemaSet.Compile();
+            XmlSchemaSet schema = new XmlSchemaSet();
+            schema.Add(null, "ucastnici.xsd");
             XmlWriterSettings settings = new XmlWriterSettings
             {
                 Indent = true,
                 IndentChars = "   " 
             };
 
-            using (XmlWriter xmlWriter = XmlWriter.Create("filmy.xml", settings))
+            using (XmlWriter xmlWriter = XmlWriter.Create("ucastnici.xml", settings))
             {
                 
                 // Create an XML document with the schema reference
                 XmlDocument doc = new XmlDocument();
-                doc.Schemas.Add(schemaSet);
-    
-                // Create the root element based on the XSD root element name ("filmy" in this case)
-                XmlElement rootElement = doc.CreateElement("filmy"); 
+                doc.Schemas.Add(schema);
                 
-                // Create and append "film" elements as needed based on your XSD structure
-                XmlElement filmElement = doc.CreateElement("film");
-                
-                // Create and append "nazov" element
-                XmlElement titleElement = doc.CreateElement("nazov");
-                titleElement.InnerText = FormData.Title; 
-                filmElement.AppendChild(titleElement);
+                // Create the root element based on the XSD root element name ("ucastnici" in this case)
+                XmlElement rootElement = doc.CreateElement("ucastnici", "SIPVS_I_NT_ucastnici_skupina_6", "SIPVS_I_NT_ucastnici_skupina_6 ucastnici.xsd");
 
-                // Create and append "rok" element
-                XmlElement yearElement = doc.CreateElement("rok"); 
-                yearElement.InnerText = FormData.Year; 
-                filmElement.AppendChild(yearElement);
+
+                for (int i = 1; i-1 < Request.Form.Count / 5; i++)
+                {
+                    // Create and append "ucastnik" elements as needed based on your XSD structure
+                    XmlElement ucastnikElement = doc.CreateElement("ucastnik");
                 
-                // Create and append "dlzka_filmu" element
-                XmlElement durationElement = doc.CreateElement("dlzka_filmu"); 
-                durationElement.InnerText = FormData.Duration; 
-                filmElement.AppendChild(durationElement);
+                    // Create and append "meno" element
+                    XmlElement nameElement = doc.CreateElement("meno");
+                    nameElement.InnerText = Request.Form[$"Participants[{i}].Name"];
+                    ucastnikElement.AppendChild(nameElement);
+
+                    // Create and append "priezvisko" element
+                    XmlElement surnameElement = doc.CreateElement("priezvisko"); 
+                    surnameElement.InnerText = Request.Form[$"Participants[{i}].Surname"];
+                    ucastnikElement.AppendChild(surnameElement);
                 
-                rootElement.AppendChild(filmElement);
+                    // Create and append "datum_narodenia" element
+                    XmlElement dateElement = doc.CreateElement("datum_narodenia"); 
+                    dateElement.InnerText = Request.Form[$"Participants[{i}].Date"]; 
+                    ucastnikElement.AppendChild(dateElement);
+                
+                    // Create and append "vek" element
+                    XmlElement ageElement = doc.CreateElement("vek"); 
+                    ageElement.InnerText = Request.Form[$"Participants[{i}].Age"];
+                    ucastnikElement.AppendChild(ageElement);
+                
+                    // Create and set the "email" attribute
+                    XmlAttribute emailAttribute = doc.CreateAttribute("email");
+                    emailAttribute.Value = Request.Form[$"Participants[{i}].Email"];
+                    ucastnikElement.Attributes.Append(emailAttribute);
+
+                    rootElement.AppendChild(ucastnikElement);
+                }
 
                 doc.AppendChild(rootElement);
 
                 doc.WriteTo(xmlWriter);
+                ViewData["PopupMessage"] = ".xml subor bol uspesne vytvoreny";
             }
-            ViewData["PopupMessage"] = ".xml subor bol uspesne vytvoreny";
         }
+        
         return Page();
     }
 
