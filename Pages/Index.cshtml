@@ -68,10 +68,16 @@
         <button type="submit">Porovnaj</button>
     </form>
 
-    @if (TempData["result"] != null)
-    {
-        <div>@TempData["result"]</div>
-    }
+@if (TempData["result"] != null)
+{
+    <script>
+        // Check if TempData["result"] is not null
+        var resultMessage = "@TempData["result"]";
+        if (resultMessage.trim() !== "") {
+            alert(resultMessage);
+        }
+    </script>
+}
 
     @if (ViewData["PopupMessage"] != null)
     {

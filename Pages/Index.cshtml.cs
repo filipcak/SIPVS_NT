@@ -100,11 +100,11 @@ public class IndexModel : PageModel
 
                 if (isValid)
                 {
-                    TempData["result"] = $"XML je valídny podľa XSD schémy.";
+                    TempData["result"] = $"XML je validny podla XSD schemy.";
                 }
                 else
                 {
-                    TempData["result"] = $"XML nie je valídny podľa XSD schémy. {errorString}";
+                    TempData["result"] = $"XML nie je validny podľa XSD schemy. {errorString}";
                 }
             }
             catch (Exception ex)
@@ -114,7 +114,7 @@ public class IndexModel : PageModel
         }
         else
         {
-            TempData["result"] = "Vyberte platný XML súbor.";
+            TempData["result"] = "Vyberte platny XML subor.";
         }
 
         return Page();
