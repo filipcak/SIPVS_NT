@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Xml.Schema;
-
+using System.Xml.Linq;
 namespace SIPVS_NT.Pages;
 
 
@@ -127,6 +127,16 @@ public class IndexModel : PageModel
     {
         try
         {
+            XDocument xDocument = XDocument.Load(xmlStream);
+
+            XNamespace xmlns = xDocument.Root.Name.Namespace;
+            if(xmlns.NamespaceName != "SIPVS_I_NT_ucastnici_skupina_6")
+            {
+                return false;
+            }
+            xmlStream.Position = 0;
+
+
             // Load the XSD schema
             XmlSchemaSet schemas = new XmlSchemaSet();
             schemas.Add("SIPVS_I_NT_ucastnici_skupina_6", XmlReader.Create(new StreamReader(xsdFilePath)));
