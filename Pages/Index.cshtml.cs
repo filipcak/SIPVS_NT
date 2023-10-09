@@ -25,6 +25,9 @@ public class IndexModel : PageModel
         {
             XmlSchemaSet schema = new XmlSchemaSet();
             schema.Add(null, "ucastnici.xsd");
+            XmlSchema schemaRead = XmlSchema.Read(new XmlTextReader("ucastnici.xsd"), null);
+            // Get the target namespace from the XmlSchema object
+            string targetNamespace = schemaRead.TargetNamespace;
             XmlWriterSettings settings = new XmlWriterSettings
             {
                 Indent = true,
@@ -39,31 +42,31 @@ public class IndexModel : PageModel
                 doc.Schemas.Add(schema);
                 
                 // Create the root element based on the XSD root element name ("ucastnici" in this case)
-                XmlElement rootElement = doc.CreateElement("ucastnici", "SIPVS_I_NT_ucastnici_skupina_6", "SIPVS_I_NT_ucastnici_skupina_6 ucastnici.xsd");
+                XmlElement rootElement = doc.CreateElement("ucastnici", targetNamespace);
 
 
                 for (int i = 1; i-1 < Request.Form.Count / 5; i++)
                 {
                     // Create and append "ucastnik" elements as needed based on your XSD structure
-                    XmlElement ucastnikElement = doc.CreateElement("ucastnik");
+                    XmlElement ucastnikElement = doc.CreateElement("ucastnik", targetNamespace);
                 
                     // Create and append "meno" element
-                    XmlElement nameElement = doc.CreateElement("meno");
+                    XmlElement nameElement = doc.CreateElement("meno", targetNamespace);
                     nameElement.InnerText = Request.Form[$"Participants[{i}].Name"];
                     ucastnikElement.AppendChild(nameElement);
 
                     // Create and append "priezvisko" element
-                    XmlElement surnameElement = doc.CreateElement("priezvisko"); 
+                    XmlElement surnameElement = doc.CreateElement("priezvisko", targetNamespace); 
                     surnameElement.InnerText = Request.Form[$"Participants[{i}].Surname"];
                     ucastnikElement.AppendChild(surnameElement);
                 
                     // Create and append "datum_narodenia" element
-                    XmlElement dateElement = doc.CreateElement("datum_narodenia"); 
+                    XmlElement dateElement = doc.CreateElement("datum_narodenia", targetNamespace); 
                     dateElement.InnerText = Request.Form[$"Participants[{i}].Date"]; 
                     ucastnikElement.AppendChild(dateElement);
                 
                     // Create and append "vek" element
-                    XmlElement ageElement = doc.CreateElement("vek"); 
+                    XmlElement ageElement = doc.CreateElement("vek", targetNamespace); 
                     ageElement.InnerText = Request.Form[$"Participants[{i}].Age"];
                     ucastnikElement.AppendChild(ageElement);
                 
