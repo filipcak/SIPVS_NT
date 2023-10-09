@@ -3,24 +3,59 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Xml.Schema;
 using System.Xml.Linq;
+using System.Xml.Xsl;
+
 namespace SIPVS_NT.Pages;
 
 
 public class IndexModel : PageModel
 {
     private readonly ILogger<IndexModel> _logger;
-    
+
     public IndexModel(ILogger<IndexModel> logger)
     {
         _logger = logger;
     }
-    
+
     public void OnGet()
     {
     }
-    
+
     public IActionResult OnPost()
     {
+        if (Request.Form.ContainsKey("generateHtml"))
+        {
+            // Specify the paths to the XML and XSLT files
+            string xmlFilePath = "ucastnici.xml"; // Replace with the actual path
+            string xsltFilePath = "transform.xsl"; // Replace with the actual path
+
+            try
+            {
+                // Load the XML and XSLT files
+                var xmlDoc = new XmlDocument();
+                xmlDoc.Load(xmlFilePath);
+
+                var xsltDoc = new XslCompiledTransform();
+                xsltDoc.Load(xsltFilePath);
+
+                // Perform the transformation
+                var resultStream = new MemoryStream();
+                xsltDoc.Transform(xmlDoc, null, resultStream);
+
+                // Set the content type and headers for the HTML file
+                Response.Headers.Add("Content-Disposition", "attachment; filename=ucastnici_html.html");
+                Response.ContentType = "text/html";
+
+                // Return the HTML file as a FileResult
+                return File(resultStream.ToArray(), "text/html");
+            }
+            catch (Exception ex)
+            {
+                // Handle any exceptions (e.g., file not found)
+                return Content("Error: " + ex.Message);
+            }
+        }
+        
         if (ModelState.IsValid)
         {
             XmlSchemaSet schema = new XmlSchemaSet();
@@ -31,45 +66,45 @@ public class IndexModel : PageModel
             XmlWriterSettings settings = new XmlWriterSettings
             {
                 Indent = true,
-                IndentChars = "   " 
+                IndentChars = "   "
             };
 
             using (XmlWriter xmlWriter = XmlWriter.Create("ucastnici.xml", settings))
             {
-                
+
                 // Create an XML document with the schema reference
                 XmlDocument doc = new XmlDocument();
                 doc.Schemas.Add(schema);
-                
+
                 // Create the root element based on the XSD root element name ("ucastnici" in this case)
                 XmlElement rootElement = doc.CreateElement("ucastnici", targetNamespace);
 
 
-                for (int i = 1; i-1 < Request.Form.Count / 5; i++)
+                for (int i = 1; i - 1 < Request.Form.Count / 5; i++)
                 {
                     // Create and append "ucastnik" elements as needed based on your XSD structure
                     XmlElement ucastnikElement = doc.CreateElement("ucastnik", targetNamespace);
-                
+
                     // Create and append "meno" element
                     XmlElement nameElement = doc.CreateElement("meno", targetNamespace);
                     nameElement.InnerText = Request.Form[$"Participants[{i}].Name"];
                     ucastnikElement.AppendChild(nameElement);
 
                     // Create and append "priezvisko" element
-                    XmlElement surnameElement = doc.CreateElement("priezvisko", targetNamespace); 
+                    XmlElement surnameElement = doc.CreateElement("priezvisko", targetNamespace);
                     surnameElement.InnerText = Request.Form[$"Participants[{i}].Surname"];
                     ucastnikElement.AppendChild(surnameElement);
-                
+
                     // Create and append "datum_narodenia" element
-                    XmlElement dateElement = doc.CreateElement("datum_narodenia", targetNamespace); 
-                    dateElement.InnerText = Request.Form[$"Participants[{i}].Date"]; 
+                    XmlElement dateElement = doc.CreateElement("datum_narodenia", targetNamespace);
+                    dateElement.InnerText = Request.Form[$"Participants[{i}].Date"];
                     ucastnikElement.AppendChild(dateElement);
-                
+
                     // Create and append "vek" element
-                    XmlElement ageElement = doc.CreateElement("vek", targetNamespace); 
+                    XmlElement ageElement = doc.CreateElement("vek", targetNamespace);
                     ageElement.InnerText = Request.Form[$"Participants[{i}].Age"];
                     ucastnikElement.AppendChild(ageElement);
-                
+
                     // Create and set the "email" attribute
                     XmlAttribute emailAttribute = doc.CreateAttribute("email");
                     emailAttribute.Value = Request.Form[$"Participants[{i}].Email"];
@@ -84,7 +119,7 @@ public class IndexModel : PageModel
                 ViewData["PopupMessage"] = ".xml subor bol uspesne vytvoreny";
             }
         }
-        
+
         return Page();
     }
 
@@ -130,10 +165,11 @@ public class IndexModel : PageModel
             XDocument xDocument = XDocument.Load(xmlStream);
 
             XNamespace xmlns = xDocument.Root.Name.Namespace;
-            if(xmlns.NamespaceName != "SIPVS_I_NT_ucastnici_skupina_6")
+            if (xmlns.NamespaceName != "SIPVS_I_NT_ucastnici_skupina_6")
             {
                 return false;
             }
+
             xmlStream.Position = 0;
 
 
@@ -149,7 +185,9 @@ public class IndexModel : PageModel
             // Validate the XML against the XSD schema
             using (XmlReader reader = XmlReader.Create(xmlStream, settings))
             {
-                while (reader.Read()) { }
+                while (reader.Read())
+                {
+                }
             }
 
             // If validation succeeds, return true
@@ -175,4 +213,5 @@ public class IndexModel : PageModel
             xmlStream.Close();
         }
     }
+
 }

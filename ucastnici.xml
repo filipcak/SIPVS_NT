@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ucastnici xmlns="SIPVS_I_NT_ucastnici_skupina_6">
-   <ucastnik email="cakfilip@gmail.com">
-      <meno>Filip</meno>
-      <priezvisko>Cak</priezvisko>
-      <datum_narodenia>2023-10-04</datum_narodenia>
-      <vek>23</vek>
+   <ucastnik email="abc@abc.com">
+      <meno>vrsvrs</meno>
+      <priezvisko>vrsvs</priezvisko>
+      <datum_narodenia>1111-11-11</datum_narodenia>
+      <vek>111</vek>
    </ucastnik>
 </ucastnici>

@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Formulár";
 }
+
+
 <!DOCTYPE html>
 <html lang="sk">
 <head>
@@ -17,6 +19,7 @@
             </ul>
             <button type="button" id="pridat-ucastnika">Pridať účastníka</button>
             <button type="submit" id="odoslat-posledny-ucastnik">Ulož XML</button>
+            <button type="submit" name="generateHtml">Transform to HTML</button>
         </fieldset>
     </form>
 
@@ -93,5 +96,49 @@
             showPopup('@ViewData["PopupMessage"]');
         </script>
     }
+
+  <script>
+      function vytvoritHtml() {
+                  // Fetch the XML file
+                  fetch('ucastnici.xml')
+                      .then(response => response.text())
+                      .then(xmlData => {
+                          // Fetch the XSLT file
+                          fetch('ucastnici.xslt')
+                              .then(response => response.text())
+                              .then(xsltData => {
+                                  // Transform XML to HTML using XSLT
+                                  const xsltProcessor = new XSLTProcessor();
+                                  const parser = new DOMParser();
+                                  const xml = parser.parseFromString(xmlData, 'text/xml');
+                                  const xsl = parser.parseFromString(xsltData, 'text/xml');
+                                  const resultDocument = xsltProcessor.transformToDocument(xml, xsl);
+                                  const htmlData = new XMLSerializer().serializeToString(resultDocument);
+      
+                                  // Create an HTML blob and object URL
+                                  const blob = new Blob([htmlData], { type: 'text/html' });
+                                  const objectUrl = URL.createObjectURL(blob);
+      
+                                  // Create a download link for the HTML file
+                                  const a = document.createElement('a');
+                                  a.href = objectUrl;
+                                  a.download = 'ucastnici_html.html';
+                                  a.textContent = 'Download HTML';
+      
+                                  // Append the link to the document
+                                  document.body.appendChild(a);
+                              })
+                              .catch(error => {
+                                  console.error('Error fetching XSLT file:', error);
+                              });
+                      })
+                      .catch(error => {
+                          console.error('Error fetching XML file:', error);
+                      });
+              }
+      
+              // Add an event listener to the "Transformuj do HTML" button
+              document.getElementById("transformuj-do-html").addEventListener("click", vytvoritHtml);
+          </script>
 </body>
 </html>
