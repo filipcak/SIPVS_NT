@@ -73,8 +73,14 @@
     <script>
         // Check if TempData["result"] is not null
         var resultMessage = "@TempData["result"]";
-        if (resultMessage.trim() !== "") {
-            alert(resultMessage);
+
+        // Create a temporary element to decode HTML entities
+        var tempElement = document.createElement("div");
+        tempElement.innerHTML = resultMessage;
+        var decodedMessage = tempElement.textContent;
+
+        if (decodedMessage.trim() !== "") {
+            alert(decodedMessage);
         }
     </script>
 }

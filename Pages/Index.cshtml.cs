@@ -103,11 +103,11 @@ public class IndexModel : PageModel
 
                 if (isValid)
                 {
-                    TempData["result"] = $"XML je validny podla XSD schemy.";
+                    TempData["result"] = $"XML je validny podla XSD schemy.\n";
                 }
                 else
                 {
-                    TempData["result"] = $"XML nie je validny podľa XSD schemy. {errorString}";
+                    TempData["result"] = $"XML nie je validny podla XSD schemy.\n{errorString}";
                 }
             }
             catch (Exception ex)
