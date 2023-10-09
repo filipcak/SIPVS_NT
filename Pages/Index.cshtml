@@ -47,7 +47,7 @@
                 <label for="Participants[${pocet_ucastnikov}].Date">Dátum narodenia:</label>
                 <input type="date" name="Participants[${pocet_ucastnikov}].Date" id="ucastnik_${pocet_ucastnikov}_datum_narodenia" required>
                 <label for="Participants[${pocet_ucastnikov}].Age">Vek:</label>
-                <input type="number" name="Participants[${pocet_ucastnikov}].Age" id="ucastnik_${pocet_ucastnikov}_vek" required min="1">
+                <input type="number" name="Participants[${pocet_ucastnikov}].Age" id="ucastnik_${pocet_ucastnikov}_vek" required min="1" max="180">
                 <label for="Participants[${pocet_ucastnikov}].Email">E-mail:</label>
                 <input type="email" name="Participants[${pocet_ucastnikov}].Email" id="ucastnik_${pocet_ucastnikov}_email" placeholder="me@example.com" required>
             `;
