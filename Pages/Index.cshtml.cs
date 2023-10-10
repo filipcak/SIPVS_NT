@@ -119,8 +119,7 @@ public class IndexModel : PageModel
                 ViewData["PopupMessage"] = ".xml subor bol uspesne vytvoreny";
             }
         }
-
-        return Page();
+        return RedirectToPage();
     }
 
     public IActionResult OnPostUploadXml(IFormFile xmlFile)
@@ -155,7 +154,7 @@ public class IndexModel : PageModel
             TempData["result"] = "Vyberte platny XML subor.";
         }
 
-        return Page();
+        return RedirectToPage();
     }
 
     public bool ValidateXmlAgainstXsd(Stream xmlStream, string xsdFilePath, ref string errorString)

@@ -19,7 +19,7 @@
             </ul>
             <button type="button" id="pridat-ucastnika">Pridať účastníka</button>
             <button type="submit" id="odoslat-posledny-ucastnik">Ulož XML</button>
-            <button type="submit" name="generateHtml">Transform to HTML</button>
+            <button type="submit" name="generateHtml">Transformuj XML do HTML</button>
         </fieldset>
     </form>
 
@@ -44,13 +44,13 @@
             novyUcastnik.innerHTML = `
                 <h2>Účastník ${pocet_ucastnikov}</h2>
                 <label for="Participants[${pocet_ucastnikov}].Name">Meno:</label>
-                <input type="text" name="Participants[${pocet_ucastnikov}].Name" id="ucastnik_${pocet_ucastnikov}_meno" required pattern="^[a-zA-Z]+$">
+                <input type="text" name="Participants[${pocet_ucastnikov}].Name" id="ucastnik_${pocet_ucastnikov}_meno" required pattern="^[a-zA-ZÀ-ž]+$">
                 <label for="Participants[${pocet_ucastnikov}].Surname">Priezvisko:</label>
-                <input type="text" name="Participants[${pocet_ucastnikov}].Surname" id="ucastnik_${pocet_ucastnikov}_priezvisko" required pattern="^[a-zA-Z]+$">
+                <input type="text" name="Participants[${pocet_ucastnikov}].Surname" id="ucastnik_${pocet_ucastnikov}_priezvisko" required pattern="^[a-zA-ZÀ-ž]+$">
                 <label for="Participants[${pocet_ucastnikov}].Date">Dátum narodenia:</label>
-                <input type="date" name="Participants[${pocet_ucastnikov}].Date" id="ucastnik_${pocet_ucastnikov}_datum_narodenia" required>
+                <input type="date" name="Participants[${pocet_ucastnikov}].Date" id="ucastnik_${pocet_ucastnikov}_datum_narodenia" required  onchange="calculateAge(this)">
                 <label for="Participants[${pocet_ucastnikov}].Age">Vek:</label>
-                <input type="number" name="Participants[${pocet_ucastnikov}].Age" id="ucastnik_${pocet_ucastnikov}_vek" required min="1" max="180">
+                <input type="number" name="Participants[${pocet_ucastnikov}].Age" id="ucastnik_${pocet_ucastnikov}_vek" required min="0" max="120">
                 <label for="Participants[${pocet_ucastnikov}].Email">E-mail:</label>
                 <input type="email" name="Participants[${pocet_ucastnikov}].Email" id="ucastnik_${pocet_ucastnikov}_email" placeholder="me@example.com" required>
             `;
@@ -65,10 +65,10 @@
         document.getElementById("pridat-ucastnika").addEventListener("click", pridatUcastnika);
     </script>
 
-    <h2 class="display-5">Nahraj XML súbor a porovnaj s XSD</h2>
+    <h2 class="text-center display-6">Nahraj XML súbor a porovnaj s XSD</h2>
     <form method="post" asp-page-handler="UploadXml" enctype="multipart/form-data">
         <input id="file-upload" type="file" name="xmlFile" accept=".xml" required />
-        <button type="submit">Porovnaj</button>
+        <button type="submit">Over XML voči XSD</button>
     </form>
 
 @if (TempData["result"] != null)
@@ -88,16 +88,24 @@
     </script>
 }
 
-    @if (ViewData["PopupMessage"] != null)
-    {
-        <div id="popupMessage">@ViewData["PopupMessage"]</div>
-        // pop up message not working
-        <script>
-            showPopup('@ViewData["PopupMessage"]');
-        </script>
-    }
+@if (ViewData["PopupMessage"] != null)
+{
+    <script>
+        // Check if ViewData["PopupMessage"] is not null
+        var resultMessage = "@ViewData["PopupMessage"]";
 
-  <script>
+        // Create a temporary element to decode HTML entities
+        var tempElement = document.createElement("div");
+        tempElement.innerHTML = resultMessage;
+        var decodedMessage = tempElement.textContent;
+
+        if (decodedMessage.trim() !== "") {
+            alert(decodedMessage);
+        }
+    </script>
+}
+
+<script>
       function vytvoritHtml() {
                   // Fetch the XML file
                   fetch('ucastnici.xml')
@@ -140,5 +148,30 @@
               // Add an event listener to the "Transformuj do HTML" button
               document.getElementById("transformuj-do-html").addEventListener("click", vytvoritHtml);
           </script>
+<script>
+    function calculateAge(dateInput) {
+        const today = new Date();
+        const birthDate = new Date(dateInput.value);
+
+        // Check if the entered date is in the future
+        if (birthDate > today) {
+            alert("Dátum narodenia nemôže byť v budúcnosti.");
+            dateInput.value = ""; // Clear the input
+            return;
+        }
+
+        let age = today.getFullYear() - birthDate.getFullYear();
+
+        // If the birthday hasn't occurred yet this year, subtract one year
+        if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        // Update the age input field with the calculated age
+        const ageInputId = dateInput.id.replace("datum_narodenia", "vek");
+        document.getElementById(ageInputId).value = age;
+    }
+</script>
+
 </body>
 </html>
