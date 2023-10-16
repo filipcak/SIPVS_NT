@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Xml.Schema;
 using System.Xml.Linq;
 using System.Xml.Xsl;
+using System;
+using System.IO;
 
 namespace SIPVS_NT.Pages;
 
@@ -19,6 +21,51 @@ public class IndexModel : PageModel
 
     public void OnGet()
     {
+    }
+
+    [HttpGet]
+    public IActionResult OnGetXmlData()
+    {
+        try
+        {
+            XDocument xmlDoc = XDocument.Load("ucastnici.xml");
+
+            return Content(xmlDoc.ToString(), "text/xml");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest("Error loading XML: " + ex.Message);
+        }
+    }
+
+    [HttpGet]
+    public IActionResult OnGetXsdData()
+    {
+        try
+        {
+            XDocument xmlDoc = XDocument.Load("ucastnici.xsd");
+
+            return Content(xmlDoc.ToString(), "text/xml");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest("Error loading XML: " + ex.Message);
+        }
+    }
+
+    [HttpGet]
+    public IActionResult OnGetXslData()
+    {
+        try
+        {
+            XDocument xmlDoc = XDocument.Load("transform.xsl");
+
+            return Content(xmlDoc.ToString(), "text/xml");
+        }
+        catch (Exception ex)
+        {
+            return BadRequest("Error loading XML: " + ex.Message);
+        }
     }
 
     public IActionResult OnPost()
@@ -122,10 +169,8 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    public IActionResult OnPostUploadXml(IFormFile xmlFile)
+    public IActionResult OnPostUploadXml()
     {
-        if (xmlFile != null && xmlFile.Length > 0)
-        {
             try
             {
                 // Get the XSD file path
@@ -133,7 +178,7 @@ public class IndexModel : PageModel
 
                 // Validate XML against XSD
                 string errorString = "";
-                bool isValid = ValidateXmlAgainstXsd(xmlFile.OpenReadStream(), xsdFilePath, ref errorString);
+                bool isValid = ValidateXmlAgainstXsd(xsdFilePath, ref errorString);
 
                 if (isValid)
                 {
@@ -148,33 +193,20 @@ public class IndexModel : PageModel
             {
                 TempData["result"] = $"Chyba: {ex.Message}";
             }
-        }
-        else
-        {
-            TempData["result"] = "Vyberte platny XML subor.";
-        }
-
         return RedirectToPage();
     }
 
-    public bool ValidateXmlAgainstXsd(Stream xmlStream, string xsdFilePath, ref string errorString)
+    public bool ValidateXmlAgainstXsd(string xsdFilePath, ref string errorString)
     {
         try
         {
-            XDocument xDocument = XDocument.Load(xmlStream);
-
-            XNamespace xmlns = xDocument.Root.Name.Namespace;
-            if (xmlns.NamespaceName != "SIPVS_I_NT_ucastnici_skupina_6")
-            {
-                return false;
-            }
-
-            xmlStream.Position = 0;
+            string xmlFilePath = "ucastnici.xml";
+            XDocument xDocument = XDocument.Load(xmlFilePath);
 
 
             // Load the XSD schema
             XmlSchemaSet schemas = new XmlSchemaSet();
-            schemas.Add("SIPVS_I_NT_ucastnici_skupina_6", XmlReader.Create(new StreamReader(xsdFilePath)));
+            schemas.Add("http://SIPVS_I_NT_ucastnici_skupina_6", XmlReader.Create(new StreamReader(xsdFilePath)));
 
             // Load the XML stream with validation settings
             XmlReaderSettings settings = new XmlReaderSettings();
@@ -182,7 +214,7 @@ public class IndexModel : PageModel
             settings.Schemas = schemas;
 
             // Validate the XML against the XSD schema
-            using (XmlReader reader = XmlReader.Create(xmlStream, settings))
+            using (XmlReader reader = XmlReader.Create(xmlFilePath, settings))
             {
                 while (reader.Read())
                 {
@@ -205,11 +237,6 @@ public class IndexModel : PageModel
             // Console.WriteLine($"Error: {ex.Message}");
             errorString = ex.Message;
             return false;
-        }
-        finally
-        {
-            // Close the XML stream
-            xmlStream.Close();
         }
     }
 
