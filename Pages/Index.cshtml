@@ -26,7 +26,7 @@
             <button type="button" id="pridat-ucastnika">Pridať účastníka</button>
             <button type="submit" id="odoslat-posledny-ucastnik">Ulož XML</button>
             <button type="submit" name="generateHtml">Transformuj XML do HTML</button>
-
+        
 
         </fieldset>
     </form>
@@ -215,7 +215,19 @@
 
                                     ditec.dSigXadesJs.getSignedXmlWithEnvelope(new Callback(function (ret) {
                                         // returned signed document
-                                        alert(ret);
+                                        // Format XML
+                                        const xmlDoc = new DOMParser().parseFromString(ret, 'text/xml');
+                                        const serializer = new XMLSerializer();
+                                        const formattedXML = serializer.serializeToString(xmlDoc);
+                                        
+                                        // Save XML to a new file
+                                        const blob = new Blob([formattedXML], { type: 'text/xml' });
+                                        const url = URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = 'signed.xml';  
+                                        a.click();
+                                        URL.revokeObjectURL(url);
                                     }));
                                 }));
                             }));

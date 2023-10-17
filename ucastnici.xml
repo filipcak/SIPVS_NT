@@ -1,15 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ucastnici xmlns="http://SIPVS_I_NT_ucastnici_skupina_6">
-   <ucastnik email="daevid.dk@gmail.com">
-      <meno>Dávid</meno>
-      <priezvisko>Kromka</priezvisko>
-      <datum_narodenia>2023-09-25</datum_narodenia>
-      <vek>0</vek>
-   </ucastnik>
-   <ucastnik email="dk@dk.df">
-      <meno>druhy</meno>
-      <priezvisko>ucastnik</priezvisko>
-      <datum_narodenia>2023-09-25</datum_narodenia>
-      <vek>10</vek>
+   <ucastnik email="example@test.com">
+      <meno>Lada</meno>
+      <priezvisko>Matveeva</priezvisko>
+      <datum_narodenia>2014-12-30</datum_narodenia>
+      <vek>8</vek>
    </ucastnik>
 </ucastnici>
