@@ -10,6 +10,16 @@
             <head>
                 <title>Ucastnici</title>
                 <style type="text/css">
+                    fieldset {
+                        border: none;
+                    }
+                    h3 {
+                        font-weight: normal;
+                        ont-size: 1.5rem;
+                    }
+                    legend {
+                        ont-size: 1.5rem;
+                    }
                     body {
                     margin: 0;
                     padding: 0;

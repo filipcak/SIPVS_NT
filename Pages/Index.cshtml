@@ -30,13 +30,18 @@
 
         </fieldset>
     </form>
+    <br>
     <fieldset>
         <form method="post" asp-page-handler="UploadXml">
             <button type="submit">Porovnaj XML voči XSD</button>
         </form>
-        <button id="podpisovac">Podpíš</button>
     </fieldset>
-
+    <br>
+    <fieldset>
+    <form>
+            <button type="button" id="podpisovac">Podpíš</button>
+    </form>
+    </fieldset>
     <script>
         // počiatočná hodnota počtu účastníkov
         let pocet_ucastnikov = 1;
@@ -206,27 +211,30 @@ async function executeScript() {
   const xslData = await loadXSL();
   ditec.dSigXadesJs.deploy(null, new Callback(function () {
     ditec.dSigXadesJs.initialize(new Callback(async function () {
-      //  function(objectId, objectDescription, sourcePdfBase64, password, objectFormatIdentifier, reqLevel, convert, callback) {
-      await ditec.dSigXadesJs.addTxtObject("objectId1", "objectDescription", "Hello world", "http://objectFormatIdentifier");
-      await ditec.dSigXadesJs.addPdfObject("objectId_2", "test pdf", decodeURIComponent("@encodedBase64Content"), "", "http://example.com/objectFormatIdentifier", 2, false);
+      await ditec.dSigXadesJs.addPdfObject("objectId_2", "pdf", decodeURIComponent("@encodedBase64Content"), "", "http://example.com/objectFormatIdentifier", 2, false);
       await ditec.dSigXadesJs.addXmlObject2("objectId_3", "xml", xmlData, xsdData, "http://SIPVS_I_NT_ucastnici_skupina_6", "http://localhost:5057/?handler=xsdData", xslData, "http://localhost:5057/?handler=xslData", "HTML");
       await ditec.dSigXadesJs.sign20("signatureId", "http://www.w3.org/2001/04/xmlenc#sha256", "urn:oid:1.3.158.36061701.1.2.3", "dataEnvelopeId", "http://dataEnvelopeURI", "dataEnvelopeDescr");
 
       ditec.dSigXadesJs.getSignedXmlWithEnvelope(new Callback(function (ret) {
-        // returned signed document
-        // Format XML
-        const xmlDoc = new DOMParser().parseFromString(ret, 'text/xml');
-        const serializer = new XMLSerializer();
-        const formattedXML = serializer.serializeToString(xmlDoc);
-
-        // Save XML to a new file
-        const blob = new Blob([formattedXML], { type: 'text/xml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'signed.xml';
-        a.click();
-        URL.revokeObjectURL(url);
+          if (ret == null || ret === '') {
+              alert("Chyba pri podpisovaní");
+          }
+          else {
+              // returned signed document
+              // Format XML
+              const xmlDoc = new DOMParser().parseFromString(ret, 'text/xml');
+              const serializer = new XMLSerializer();
+              const formattedXML = serializer.serializeToString(xmlDoc);
+        
+              // Save XML to a new file
+              const blob = new Blob([formattedXML], { type: 'text/xml' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'signed.xml';
+              a.click();
+              URL.revokeObjectURL(url);
+            }
       }));
     }));
   }));
