@@ -6,7 +6,9 @@ using System.Xml.Linq;
 using System.Xml.Xsl;
 using System;
 using System.IO;
-
+using System.Text;
+using Org.BouncyCastle.Tsp;
+using WindowsFormsApp1;
 namespace SIPVS_NT.Pages;
 
 
@@ -67,7 +69,23 @@ public class IndexModel : PageModel
             return BadRequest("Error loading XML: " + ex.Message);
         }
     }
+    
+    static byte[] ExtractDataFromXmlElement(XmlDocument xmlDoc, string elementName)
+    {
+        // Your logic to extract data from the specified XML element
+        XmlNodeList dataNodes = xmlDoc.GetElementsByTagName(elementName);
+        if (dataNodes.Count > 0)
+        {
+            string innerText = dataNodes[0].InnerText;
 
+            // Convert the string to byte array using a specific encoding (e.g., UTF-8)
+            return Encoding.UTF8.GetBytes(innerText);
+        }
+
+        // If the element is not found or the extraction logic is more complex, adjust accordingly
+        return Array.Empty<byte>();
+    }
+    
     public IActionResult OnPost()
     {
         if (Request.Form.ContainsKey("generateHtml"))
@@ -100,6 +118,79 @@ public class IndexModel : PageModel
             {
                 // Handle any exceptions (e.g., file not found)
                 return Content("Error: " + ex.Message);
+            }
+        }
+        else if (Request.Form.ContainsKey("addTimestamp"))
+        {
+            string xmlSignedFilePath = "signed.xml";
+
+            try
+            {
+                var xmlDoc = new XmlDocument();
+                xmlDoc.Load(xmlSignedFilePath);
+                // choosen message imprint from signed.xml
+                byte[] signature = ExtractDataFromXmlElement(xmlDoc, "ucastnici");
+                
+                // Calculate the hash of the extracted data
+                Org.BouncyCastle.Crypto.IDigest digest = new Org.BouncyCastle.Crypto.Digests.Sha256Digest();
+                digest.BlockUpdate(signature, 0, signature.Length);
+                byte[] signatureDigest = new byte[digest.GetDigestSize()];
+                int outOff = 0;
+                digest.DoFinal(signatureDigest, outOff);
+
+                TimeStampRequestGenerator tsRequestGenerator = new TimeStampRequestGenerator(); // certificate generator
+                tsRequestGenerator.SetCertReq(true);
+                TimeStampRequest tsRequest = tsRequestGenerator.Generate(TspAlgorithms.Sha256, signatureDigest); // vygenerujeme request
+
+                Timestamp ts = new Timestamp();
+                byte[] responseBytes = ts.GetTimestamp(tsRequest.GetEncoded(), "https://test.ditec.sk/TSAServer/tsa.aspx");
+
+                TimeStampResponse tsResponse = new TimeStampResponse(responseBytes);
+                
+                TimeStampToken timestampToken = tsResponse.TimeStampToken;
+                
+                // Prapare the XML document with the signature to add the timestamp
+                // Create a new element for timestamp information
+                XmlElement signatureTimestampElement = xmlDoc.CreateElement("SignatureTimestamp");
+
+                // Add the timestamp data to the element
+                XmlElement timeStampElement = xmlDoc.CreateElement("Timestamp");
+                timeStampElement.InnerText = timestampToken.TimeStampInfo.GenTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                XmlElement encapsulatedTimeStamp = xmlDoc.CreateElement("EncapsulatedTimeStamp");
+                string base64EncodedToken = Convert.ToBase64String(tsResponse.TimeStampToken.GetEncoded());
+
+                encapsulatedTimeStamp.InnerText = base64EncodedToken;
+                XmlElement hashData = xmlDoc.CreateElement("HashData");
+                hashData.InnerText = timestampToken.TimeStampInfo.MessageImprintAlgOid;
+                
+                signatureTimestampElement.AppendChild(timeStampElement);
+                signatureTimestampElement.AppendChild(encapsulatedTimeStamp);
+                signatureTimestampElement.AppendChild(hashData);
+
+                // Add the timestamp element to the document
+                xmlDoc.DocumentElement?.AppendChild(signatureTimestampElement);
+
+                // Save the modified XML document
+                xmlDoc.Save("signedTimestamp.xml");
+                
+                // user to save the XML file
+                byte[] xmlBytes = Encoding.UTF8.GetBytes(xmlDoc.OuterXml);
+
+                /*
+                // Create a MemoryStream and write the XML content to it
+                using (var resultStream = new MemoryStream(xmlBytes))
+                {
+                    // Set the content type and headers for the XML file
+                    Response.Headers.Add("Content-Disposition", "attachment; filename=signedTimestamp.xml");
+                    Response.ContentType = "application/xml";
+                    // Return the XML file as a FileStreamResult
+                    return File(resultStream.ToArray(), "application/xml");
+                }
+                */
+            }
+            catch (Exception e)
+            {
+                return Content("Error: " + e.Message);
             }
         }
         

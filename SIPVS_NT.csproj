@@ -8,4 +8,7 @@
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'https' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'http' " />
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle" Version="1.8.9" />
+  </ItemGroup>
 </Project>
