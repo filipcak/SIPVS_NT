@@ -187,6 +187,7 @@ public class IndexModel : PageModel
                     return File(resultStream.ToArray(), "application/xml");
                 }
                 */
+                TempData["result"] = $"Casova peciatka bola pridana\n";
             }
             catch (Exception e)
             {
