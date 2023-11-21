@@ -128,8 +128,19 @@ public class IndexModel : PageModel
             {
                 var xmlDoc = new XmlDocument();
                 xmlDoc.Load(xmlSignedFilePath);
+                // Set up a namespace manager with the required namespaces
+                XmlNamespaceManager nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
+                nsManager.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+                nsManager.AddNamespace("xzep", "http://www.ditec.sk/ep/signature_formats/xades_zep/v2.0");
+
+                // Use XPath to navigate to the SignatureValue element
+                XmlNode signatureValueNode = xmlDoc.SelectSingleNode("//ds:SignatureValue", nsManager);
+                
                 // choosen message imprint from signed.xml
-                byte[] signature = ExtractDataFromXmlElement(xmlDoc, "ucastnici");
+                string signatureValue = signatureValueNode.InnerText;
+
+                // Convert the SignatureValue content to a byte array
+                byte[] signature = Convert.FromBase64String(signatureValue);
                 
                 // Calculate the hash of the extracted data
                 Org.BouncyCastle.Crypto.IDigest digest = new Org.BouncyCastle.Crypto.Digests.Sha256Digest();
@@ -151,27 +162,59 @@ public class IndexModel : PageModel
                 
                 // Prapare the XML document with the signature to add the timestamp
                 // Create a new element for timestamp information
+                nsManager.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+                nsManager.AddNamespace("xzep", "http://www.ditec.sk/ep/signature_formats/xades_zep/v2.0");
+                nsManager.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
+
+                // Create a new element for timestamp information
                 XmlElement signatureTimestampElement = xmlDoc.CreateElement("SignatureTimestamp");
 
                 // Add the timestamp data to the element
                 XmlElement timeStampElement = xmlDoc.CreateElement("Timestamp");
                 timeStampElement.InnerText = timestampToken.TimeStampInfo.GenTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
                 XmlElement encapsulatedTimeStamp = xmlDoc.CreateElement("EncapsulatedTimeStamp");
                 string base64EncodedToken = Convert.ToBase64String(tsResponse.TimeStampToken.GetEncoded());
-
                 encapsulatedTimeStamp.InnerText = base64EncodedToken;
-                XmlElement hashData = xmlDoc.CreateElement("HashData");
-                hashData.InnerText = timestampToken.TimeStampInfo.MessageImprintAlgOid;
-                
+
                 signatureTimestampElement.AppendChild(timeStampElement);
                 signatureTimestampElement.AppendChild(encapsulatedTimeStamp);
-                signatureTimestampElement.AppendChild(hashData);
 
-                // Add the timestamp element to the document
-                xmlDoc.DocumentElement?.AppendChild(signatureTimestampElement);
+                // Find the SignedProperties node
+                XmlNode signedPropertiesNode = xmlDoc.SelectSingleNode("//xades:SignedProperties", nsManager);
 
-                // Save the modified XML document
-                xmlDoc.Save("signedTimestamp.xml");
+                // Check if the SignedProperties node is found
+                if (signedPropertiesNode != null)
+                {
+                    // Create a new UnsignedProperties node
+                    XmlElement unsignedPropertiesNode = xmlDoc.CreateElement("xades", "UnsignedProperties", "http://uri.etsi.org/01903/v1.3.2#");
+                    // Create a new UnsignedSignatureProperties node
+                    XmlElement unsignedSignaturePropertiesNode = xmlDoc.CreateElement("xades", "UnsignedSignatureProperties", "http://uri.etsi.org/01903/v1.3.2#");
+                    
+                    unsignedSignaturePropertiesNode.AppendChild(signatureTimestampElement);
+                    // Add the timestamp element under UnsignedProperties
+                    unsignedPropertiesNode.AppendChild(unsignedSignaturePropertiesNode);
+
+                    // Check if there are any child nodes under SignedProperties
+                    if (signedPropertiesNode.ParentNode != null)
+                    {
+                        // Insert the UnsignedProperties node right after SignedProperties
+                        signedPropertiesNode.ParentNode.InsertAfter(unsignedPropertiesNode, signedPropertiesNode);
+                    }
+                    else
+                    {
+                        // If SignedProperties has no parent, insert it as the last child of the root
+                        xmlDoc.DocumentElement?.AppendChild(unsignedPropertiesNode);
+                    }
+
+                    // Save the modified XML document
+                    xmlDoc.Save("signedTimestamp.xml");
+                    Console.WriteLine("Timestamp information added successfully.");
+                }
+                else
+                {
+                    Console.WriteLine("SignedProperties node not found in the XML.");
+                }
                 
                 // user to save the XML file
                 byte[] xmlBytes = Encoding.UTF8.GetBytes(xmlDoc.OuterXml);
