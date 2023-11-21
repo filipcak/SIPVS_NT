@@ -127,11 +127,14 @@ public class IndexModel : PageModel
             try
             {
                 var xmlDoc = new XmlDocument();
+                xmlDoc.PreserveWhitespace = true;
                 xmlDoc.Load(xmlSignedFilePath);
                 // Set up a namespace manager with the required namespaces
                 XmlNamespaceManager nsManager = new XmlNamespaceManager(xmlDoc.NameTable);
                 nsManager.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
                 nsManager.AddNamespace("xzep", "http://www.ditec.sk/ep/signature_formats/xades_zep/v2.0");
+                nsManager.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
+                // Prapare the XML document with the signature to add the timestamp
 
                 // Use XPath to navigate to the SignatureValue element
                 XmlNode signatureValueNode = xmlDoc.SelectSingleNode("//ds:SignatureValue", nsManager);
@@ -159,25 +162,13 @@ public class IndexModel : PageModel
                 TimeStampResponse tsResponse = new TimeStampResponse(responseBytes);
                 
                 TimeStampToken timestampToken = tsResponse.TimeStampToken;
-                
-                // Prapare the XML document with the signature to add the timestamp
+                string customNamespaceURI = "Id";
                 // Create a new element for timestamp information
-                nsManager.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
-                nsManager.AddNamespace("xzep", "http://www.ditec.sk/ep/signature_formats/xades_zep/v2.0");
-                nsManager.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
+                XmlElement signatureTimestampElement = xmlDoc.CreateElement("SignatureTimestamp", customNamespaceURI);
 
-                // Create a new element for timestamp information
-                XmlElement signatureTimestampElement = xmlDoc.CreateElement("SignatureTimestamp");
-
-                // Add the timestamp data to the element
-                XmlElement timeStampElement = xmlDoc.CreateElement("Timestamp");
-                timeStampElement.InnerText = timestampToken.TimeStampInfo.GenTime.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-                XmlElement encapsulatedTimeStamp = xmlDoc.CreateElement("EncapsulatedTimeStamp");
+                XmlElement encapsulatedTimeStamp = xmlDoc.CreateElement("EncapsulatedTimeStamp", customNamespaceURI);
                 string base64EncodedToken = Convert.ToBase64String(tsResponse.TimeStampToken.GetEncoded());
                 encapsulatedTimeStamp.InnerText = base64EncodedToken;
-
-                signatureTimestampElement.AppendChild(timeStampElement);
                 signatureTimestampElement.AppendChild(encapsulatedTimeStamp);
 
                 // Find the SignedProperties node
