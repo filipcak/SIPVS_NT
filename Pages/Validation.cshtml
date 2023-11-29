@@ -4,7 +4,6 @@
     ViewData["Title"] = "Validation";
 }
 
-<p></p>
 <h2>Validácia</h2>
 <p>
     Pridať sem potom validáciu. (Zadanie 4)
@@ -12,3 +11,7 @@
 <p>
     Navrhujem pridať tlačidlo, ktorým sa bude spúšťať validácia.
 </p>
+
+<form method="post">
+    <button type="submit" asp-page-handler="LoadFiles" class="btn btn-primary" style="background-color: black; outline-color: black; ">Over podpisy</button>
+</form>
