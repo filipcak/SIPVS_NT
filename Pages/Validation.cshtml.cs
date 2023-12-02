@@ -4,12 +4,14 @@ using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Linq;
+using System.Xml.XPath;
+
 
 namespace SIPVS_NT.Pages
 {
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     [IgnoreAntiforgeryToken]
-    
+
     // Logger class for logging
     public class Logger
     {
@@ -68,7 +70,7 @@ namespace SIPVS_NT.Pages
                 {
                     // get file name
                     string fileName = Path.GetFileName(filePath);
-                    
+
                     // Initialize the verification flag
                     bool validationPassed = true;
 
@@ -80,8 +82,17 @@ namespace SIPVS_NT.Pages
                         logger.Log($"Overenie dátovej obálky nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
+
+                    // Verification XML Signature 
+                    if (!Signature(filePath))
+                    {
+                        validationPassed = false;
+                        logger.Log($"Overenie XML Signature nebolo úspešné pre: {filePath}");
+                        continue; // Stop verification for this file
+                    }
+
                     // pridanie dalsieho overenia
-                    
+
                     // If all conditions passed, log successful validation
                     if (validationPassed)
                     {
@@ -90,7 +101,8 @@ namespace SIPVS_NT.Pages
                 }
 
                 // Logic or return a response if needed
-                return Content("<script>alert('Process finished'); window.location.href='/Validation'</script>", "text/html");
+                return Content("<script>alert('Process finished'); window.location.href='/Validation'</script>",
+                    "text/html");
             }
             catch (Exception ex)
             {
@@ -98,7 +110,7 @@ namespace SIPVS_NT.Pages
                 return new BadRequestObjectResult($"Error validating signatures: {ex.Message}");
             }
         }
-        
+
         // Method for verifying the data envelope - Overenie dátovej obálky
         private bool DataEnvelope(string filePath)
         {
@@ -108,9 +120,81 @@ namespace SIPVS_NT.Pages
             XElement rootElement = xmlDoc.Root;
 
             // Check if the root element is not null and contains the required attributes
-            return rootElement != null && 
-                   rootElement.Attribute(XNamespace.Xmlns + "xzep") != null && 
+            return rootElement != null &&
+                   rootElement.Attribute(XNamespace.Xmlns + "xzep") != null &&
                    rootElement.Attribute(XNamespace.Xmlns + "ds") != null;
+        }
+
+        // Method for verifying the XML Signature
+        private bool Signature(string filePath)
+        {
+            string[] SUPPORTED_SIGNATURE_ALGORITHMS =
+            {
+                "http://www.w3.org/2000/09/xmldsig#dsa-sha1",
+                "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384",
+                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512"
+            };
+
+            string[] SUPPORTED_DIGEST_ALGORITHMS =
+            {
+                "http://www.w3.org/2000/09/xmldsig#sha1",
+                "http://www.w3.org/2001/04/xmldsig-more#sha224",
+                "http://www.w3.org/2001/04/xmlenc#sha256",
+                "https://www.w3.org/2001/04/xmldsig-more#sha384",
+                "http://www.w3.org/2001/04/xmlenc#sha512"
+            };
+
+            string[] SUPPORTED_TRANSFORM_ALGORITHMS =
+            {
+                "http://www.w3.org/TR/2001/REC-xml-c14n-20010315",
+                "http://www.w3.org/2000/09/xmldsig#base64"
+            };
+
+            // Load XML content from the file
+            XDocument xmlDoc = XDocument.Load(filePath);
+
+            // Define the namespace
+            var namespaceId = new XmlNamespaceManager(new NameTable());
+            namespaceId.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+
+            // checking the contents of ds:SignatureMethod a ds:CanonicalizationMethod 
+            string signatureMethodAlgorithm = xmlDoc.XPathSelectElement("//ds:SignedInfo/ds:SignatureMethod", namespaceId)?.Attribute("Algorithm")?.Value;
+            string canonicalizationMethodAlgorithm = xmlDoc.XPathSelectElement("//ds:SignedInfo/ds:CanonicalizationMethod", namespaceId)?.Attribute("Algorithm")?.Value;
+
+            if (!SUPPORTED_SIGNATURE_ALGORITHMS.Contains(signatureMethodAlgorithm) ||
+                canonicalizationMethodAlgorithm != "http://www.w3.org/TR/2001/REC-xml-c14n-20010315")
+            {
+                return false;
+            }
+
+            // select all references within ds:SignedInfo
+            var references = xmlDoc.XPathSelectElements("//ds:SignedInfo/ds:Reference", namespaceId);
+
+            foreach (var reference in references)
+            {
+                // Check ds:Transforms
+                var transforms = reference.XPathSelectElements("ds:Transforms/ds:Transform", namespaceId);
+                foreach (var transform in transforms)
+                {
+                    string transformAlgorithm = transform.Attribute("Algorithm")?.Value;
+                    if (!SUPPORTED_TRANSFORM_ALGORITHMS.Contains(transformAlgorithm))
+                    {
+                        return false; // Unsupported transform algorithm found
+                    }
+                }
+
+                // Check ds:DigestMethod
+                string digestAlgorithm = reference.XPathSelectElement("ds:DigestMethod", namespaceId)
+                    ?.Attribute("Algorithm")?.Value;
+                if (!SUPPORTED_DIGEST_ALGORITHMS.Contains(digestAlgorithm))
+                {
+                    return false; // Unsupported digest algorithm found
+                }
+            }
+
+            return true; // All references pass the checks
         }
     }
 }
