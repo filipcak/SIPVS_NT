@@ -1,19 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System;
-using System.IO;
 using System.Security.Cryptography.Xml;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
-using System;
-using System.IO;
-using System.Linq;
+using System.Globalization;
 using System.Security.Cryptography;
-using System.Xml;
-using System.Xml.Linq;
-using System.Security.Cryptography.Xml;
-using System.Text;
+using System.Security.Cryptography.X509Certificates;
+using System.Numerics;
 
 
 namespace SIPVS_NT.Pages
@@ -455,34 +449,101 @@ namespace SIPVS_NT.Pages
             namespaceId.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
             namespaceId.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
 
+            // ds:Signature check Id attribute 
             string dsSignatureId = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureId == null)
                 return false;
-
+            
             XElement dsSignatureElement = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId);
             if (dsSignatureElement == null)
                 return false;
-
+            
+            // ds:Signature check namespace xmlns:ds attribute
             XAttribute xmlnsDsAttribute = dsSignatureElement.Attribute(XNamespace.Xmlns + "ds");
             Console.WriteLine($"Error logging: {xmlnsDsAttribute}");
             if (xmlnsDsAttribute == null)
                 return false;
-
+            
+            // ds:SignatureValue check Id attribute
             string dsSignatureValueId = xmlDoc.XPathSelectElement("//ds:SignatureValue", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureValueId == null)
                 return false;
-
-            string KeyInfo = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId)?.Attribute("Id")?.Value;
-            if (KeyInfo == null)
-                return false;
-
+            
+            
             string SignatureProperties = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId)?.Attribute("Id")?.Value;
             if (SignatureProperties == null)
                 return false;
-
+            
             string SignedProperties = xmlDoc.XPathSelectElement("//xades:SignedProperties", namespaceId)?.Attribute("Id")?.Value;
             if (SignedProperties == null)
                 return false;
+            
+            // verification of ds:KeyInfo content
+            
+            // Check ds:KeyInfo Id
+            XElement keyInfoElement = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId);
+            if (keyInfoElement?.Attribute("Id")?.Value == null)
+            {
+                Console.WriteLine($"ds:KeyInfo neobsahuje Id");
+                return false;
+            }
+
+            // Check ds:KeyInfo elements
+            XElement x509DataElement = keyInfoElement.XPathSelectElement(".//ds:X509Data", namespaceId);
+            if (x509DataElement == null)
+            {
+                Console.WriteLine($"ds:KeyInfo neobsahuje element ds:X509Data");
+                return false;
+            }
+            if (x509DataElement.Elements().Count() < 3)
+            {
+                Console.WriteLine($"Chýbajú podelementy pre ds:X509Data");
+                return false;
+            }
+
+            // Check ds:KeyInfo values
+            byte[] bytes;
+            var certificate = new X509Certificate2();
+            string issuerSerialFirst = "";
+            string issuerSerialSecond = "";
+            string subjectName = "";
+
+            foreach (XElement element in x509DataElement.Elements())
+            {
+                switch (element.Name.LocalName)
+                {
+                    case "X509Certificate":
+                        bytes = Convert.FromBase64String(element.Value);
+                        certificate = new X509Certificate2(bytes);
+                        break;
+                    case "X509IssuerSerial":
+                        XElement firstChild = element.Elements().FirstOrDefault();
+                        XElement lastChild = element.Elements().LastOrDefault();
+                        issuerSerialFirst = firstChild?.Value ?? "";
+                        issuerSerialSecond = lastChild?.Value ?? "";
+                        break;
+                    case "X509SubjectName":
+                        subjectName = element.Value;
+                        break;
+                }
+            }
+
+            BigInteger hex = BigInteger.Parse(certificate.SerialNumber, NumberStyles.AllowHexSpecifier);
+            if (!certificate.Subject.Equals(subjectName))
+            {
+                Console.WriteLine($"Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                return false;
+            }
+            if (!certificate.Issuer.Equals(issuerSerialFirst))
+            {
+                Console.WriteLine($"Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                return false;
+            }
+            if (!hex.ToString().Equals(issuerSerialSecond))
+            {
+                Console.WriteLine($"Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikáte");
+                return false;
+            }
 
             return true;
         }
