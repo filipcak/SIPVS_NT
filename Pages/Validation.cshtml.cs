@@ -48,8 +48,8 @@ namespace SIPVS_NT.Pages
     }
 
 
-    
-    
+
+
     public class ValidationModel : PageModel
     {
         // Folder path where the files are located
@@ -81,7 +81,6 @@ namespace SIPVS_NT.Pages
                     // Initialize the verification flag
                     bool validationPassed = true;
 
-
                     // Verify conditions one by one
                     // Verification of the data envelope - Overenie dátovej obálky
                     if (!DataEnvelope(filePath))
@@ -98,7 +97,7 @@ namespace SIPVS_NT.Pages
                         logger.Log($"Overenie XML Signature nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
-                    
+
                     // Verification Core Validation 
                     if (!CoreValidation(filePath))
                     {
@@ -119,10 +118,16 @@ namespace SIPVS_NT.Pages
                         logger.Log($"Overenie časovej pečiatky nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
-                    //dorobiť
-                    if(!checkMessageImprint(filePath)) {
+                    if (!checkMessageImprint(filePath))
+                    {
                         validationPassed = false;
                         logger.Log($"Overenie Messageimprint nebolo úspešné pre: {filePath}");
+                        continue; // Stop verification for this file
+                    }
+                    if (!checkSignCert(filePath))
+                    {
+                        validationPassed = false;
+                        logger.Log($"Overenie platnosti podpisového certifikátu nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
 
@@ -458,11 +463,11 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje Id");
                 return false;
             }
-            
+
             XElement dsSignatureElement = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId);
             if (dsSignatureElement == null)
                 return false;
-            
+
             // ds:Signature check namespace xmlns:ds attribute
             XAttribute xmlnsDsAttribute = dsSignatureElement.Attribute(XNamespace.Xmlns + "ds");
             if (xmlnsDsAttribute == null)
@@ -470,7 +475,7 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje specifikovany namespace xmlns:ds");
                 return false;
             }
-            
+
             // ds:SignatureValue check Id attribute
             string dsSignatureValueId = xmlDoc.XPathSelectElement("//ds:SignatureValue", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureValueId == null)
@@ -478,23 +483,23 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:SignatureValue neobsahuje Id");
                 return false;
             }
-            
+
             XElement signedInfoElement = xmlDoc.XPathSelectElement("//ds:SignedInfo", namespaceId);
             IEnumerable<XElement> dsReferenceNodes = signedInfoElement.XPathSelectElements(".//ds:Reference", namespaceId);
-            
+
 
             if (dsReferenceNodes == null || dsReferenceNodes.Count() < 1)
             {
                 Console.WriteLine($"File: {filePath} Error: ds:SignedInfo neobsahuje ds:Reference");
                 return false;
             }
-            
+
             string keyInfoUri = "";
             string signaturePropertiesUri = "";
             string signedPropertiesUri = "";
             List<string> manifestUris = new List<string>();
-            
-            
+
+
             foreach (XElement referenceNode in dsReferenceNodes)
             {
                 if (referenceNode.Attribute("Id") == null)
@@ -502,31 +507,35 @@ namespace SIPVS_NT.Pages
                     Console.WriteLine($"File: {filePath} Error: ds:Reference neobsahuje Id");
                     continue;
                 }
-               
+
                 string uriType = referenceNode.Attribute("Type")?.Value;
                 if (uriType != null)
                 {
                     string uriValue = referenceNode.Attribute("URI")?.Value.Substring(1);
-                    
-                    if (uriType.Contains("Object")) {
+
+                    if (uriType.Contains("Object"))
+                    {
                         keyInfoUri = uriValue;
                     }
-                    else if (uriType.Contains("SignatureProperties")) {
+                    else if (uriType.Contains("SignatureProperties"))
+                    {
                         signaturePropertiesUri = uriValue;
                     }
-                    else if (uriType.Contains("SignedProperties")) {
+                    else if (uriType.Contains("SignedProperties"))
+                    {
                         signedPropertiesUri = uriValue;
                     }
-                    else if (uriType.Contains("Manifest")) {
+                    else if (uriType.Contains("Manifest"))
+                    {
                         manifestUris.Add(uriValue);
                     }
                 }
             }
-            
+
             XElement KeyInfoElement = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId);
             XElement SignaturePropertiesElement = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId);
             XElement SignedPropertiesElement = xmlDoc.XPathSelectElement("//xades:SignedProperties", namespaceId);
-            
+
             if (KeyInfoElement.Attribute("Id")?.Value == null)
             {
                 Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
@@ -537,38 +546,38 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:Keyinfo nezhoduje sa Id s URI");
                 return false;
             }
-            
+
             if (SignaturePropertiesElement.Attribute("Id")?.Value == null)
             {
                 Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
                 return false;
             }
-            
+
             if (!SignaturePropertiesElement.Attribute("Id").Value.Equals(signaturePropertiesUri))
             {
                 Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
                 return false;
             }
-            
+
             if (SignedPropertiesElement.Attribute("Id")?.Value == null)
             {
                 Console.WriteLine($"File: {filePath} Error: ds:SignedProperties neobsahuje Id");
                 return false;
             }
-            
+
             if (!SignedPropertiesElement.Attribute("Id").Value.Equals(signedPropertiesUri))
             {
                 Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
                 return false;
             }
-            
+
             // Check attributes of ds:Manifest
             IEnumerable<XElement> elementManifestNodes = xmlDoc.XPathSelectElements("//ds:Manifest", namespaceId);
-            
+
             bool flag = false;
             foreach (XElement oneManifest in elementManifestNodes)
             {
-                foreach(string manifestURI in manifestUris)
+                foreach (string manifestURI in manifestUris)
                 {
                     if (oneManifest.Attribute("Id") == null || !oneManifest.Attribute("Id").Value.Equals(manifestURI))
                         flag = true;
@@ -580,9 +589,9 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:Manifest sa zhoduje sa Id s URI");
                 return false;
             }
-            
+
             // verification of ds:KeyInfo content
-            
+
             // Check ds:KeyInfo Id
             XElement keyInfoElement = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId);
             if (keyInfoElement?.Attribute("Id")?.Value == null)
@@ -590,7 +599,7 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
                 return false;
             }
-            
+
             // Check ds:KeyInfo elements
             XElement x509DataElement = keyInfoElement.XPathSelectElement(".//ds:X509Data", namespaceId);
             if (x509DataElement == null)
@@ -603,14 +612,14 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: Chýbajú podelementy pre ds:X509Data");
                 return false;
             }
-            
+
             // Check ds:KeyInfo values
             byte[] bytes;
             var certificate = new X509Certificate2();
             string issuerSerialFirst = "";
             string issuerSerialSecond = "";
             string subjectName = "";
-            
+
             foreach (XElement element in x509DataElement.Elements())
             {
                 switch (element.Name.LocalName)
@@ -630,7 +639,7 @@ namespace SIPVS_NT.Pages
                         break;
                 }
             }
-            
+
             BigInteger hex = BigInteger.Parse(certificate.SerialNumber, NumberStyles.AllowHexSpecifier);
             if (!certificate.Subject.Equals(subjectName))
             {
@@ -647,7 +656,7 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
-            
+
             // Check ds:SignatureProperties Id
             XElement signaturePropertiesElement = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId);
             if (signaturePropertiesElement?.Attribute("Id")?.Value == null)
@@ -655,7 +664,7 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
                 return false;
             }
-            
+
             // Check ds:SignatureProperties number of elements
             IEnumerable<XElement> signaturePropertiesChildren = signaturePropertiesElement.Elements();
             if (signaturePropertiesChildren.Count() < 2)
@@ -663,7 +672,7 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje dva elementy");
                 return false;
             }
-            
+
             // Check ds:SignatureProperties elements
             foreach (XElement element in signaturePropertiesChildren)
             {
@@ -671,13 +680,13 @@ namespace SIPVS_NT.Pages
                 if (name == "ProductInfos" || name == "SignatureVersion")
                 {
                     XAttribute targetAttribute = element.Attribute("Target");
-                   
+
                     if (targetAttribute != null)
                     {
                         string tmpTargetValue = targetAttribute.Value.Substring(1);
-                        
+
                         string SignatureValueId = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId)?.Attribute("Id")?.Value;
-            
+
                         if (!tmpTargetValue.Equals(SignatureValueId))
                         {
                             Console.WriteLine($"File: {filePath} Error: Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
@@ -686,8 +695,8 @@ namespace SIPVS_NT.Pages
                     }
                 }
             }
-            
-            
+
+
             // check ds:Manifest elements
             IEnumerable<XElement> manifestElements = xmlDoc.XPathSelectElements("//ds:Manifest", namespaceId);
 
@@ -700,7 +709,7 @@ namespace SIPVS_NT.Pages
                     Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing Id attribute");
                     return false;
                 }
-                
+
                 // ds:Transforms
                 XElement transformsElement = manifestElement.Element(namespaceId + "Transforms");
                 if (transformsElement == null)
@@ -708,7 +717,7 @@ namespace SIPVS_NT.Pages
                     Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:Transforms element");
                     return false;
                 }
-                
+
                 // ds:DigestMethod
                 XElement digestMethodElement = manifestElement.Element(namespaceId + "DigestMethod");
                 if (digestMethodElement == null)
@@ -725,14 +734,14 @@ namespace SIPVS_NT.Pages
                     "https://www.w3.org/2001/04/xmldsig-more#sha384",
                     "http://www.w3.org/2001/04/xmlenc#sha512"
                 };
-                
+
                 string digestAlgorithm = digestMethodElement.Attribute("Algorithm")?.Value;
                 if (!SUPPORTED_DIGEST_ALGORITHMS.Contains(digestAlgorithm))
                 {
                     Console.WriteLine($"File: {filePath} Error: Unsupported digest algorithm in ds:DigestMethod");
                     return false;
                 }
-                
+
                 // TODO
                 // overenie hodnoty Type atribútu voči profilu XAdES_ZEP
                 XAttribute typeAttribute = manifestElement.Attribute("Type");
@@ -741,7 +750,7 @@ namespace SIPVS_NT.Pages
                     Console.WriteLine($"File: {filePath} Error: Type attribute in ds:Manifest element does not match the expected value");
                     return false;
                 }
-                
+
                 // prave jedna referencia
                 XElement objectReferenceElement = manifestElement.Elements(namespaceId + "Reference").FirstOrDefault();
                 if (objectReferenceElement == null || objectReferenceElement.Elements(namespaceId + "Object").Count() != 1)
@@ -811,7 +820,7 @@ namespace SIPVS_NT.Pages
             // XPath expression pre získanie timestamp elementu
             string timestampXPath = "//xades:EncapsulatedTimeStamp";
             XElement timestampElement = xmlDoc.XPathSelectElement(timestampXPath, dsNamespace);
-            
+
             if (timestampElement != null)
             {
                 // použijeme existujúcu checkTimestamp funkciu na overenie platnosti
@@ -827,6 +836,50 @@ namespace SIPVS_NT.Pages
 
             Console.WriteLine($"false");
             return false;
+        }
+
+        private bool checkSignCert(string filePath)
+        {
+            bool isCertValid = true;
+            // Load XML content from the file
+            XDocument xmlDoc = XDocument.Load(filePath);
+            Org.BouncyCastle.X509.X509Crl signCrl = GetSignCert();
+
+            var namespaceId = new XmlNamespaceManager(new NameTable());
+            namespaceId.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+            namespaceId.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
+
+            // XPath vyraz na ziskanie certifikatu
+            string xpathExpression = "//ds:X509Certificate";
+            XElement x509CertElement = xmlDoc.XPathSelectElement(xpathExpression, namespaceId);
+            string timeString = xmlDoc.XPathSelectElement("//xades:SigningTime", namespaceId).Value;
+            DateTime time = DateTime.Parse(timeString);
+            if (x509CertElement != null)
+            {
+                // Zakodovany certifikat v Base64
+                string base64Cert = x509CertElement.Value;
+
+                // Dekódovanie Base64 reťazca na pole bytov
+                byte[] certBytes = Convert.FromBase64String(base64Cert);
+
+                // Vytvorenie X509Certificate objektu z dekódovaných bytov
+                Org.BouncyCastle.X509.X509CertificateParser certParser = new Org.BouncyCastle.X509.X509CertificateParser();
+                Org.BouncyCastle.X509.X509Certificate x509Certificate = certParser.ReadCertificate(new MemoryStream(certBytes));
+                // Overenie platnosti voči času T
+                isCertValid = x509Certificate.NotBefore <= time && time <= x509Certificate.NotAfter;
+                if (isCertValid)
+                {
+                    // Overenie platnosti voči platnému poslednému CRL
+                    isCertValid = !signCrl.IsRevoked(x509Certificate);
+                }
+
+            }
+            else
+            {
+                isCertValid = false;
+            }
+
+            return isCertValid;
         }
 
         public Org.BouncyCastle.X509.X509Crl GetTimestampCert()
