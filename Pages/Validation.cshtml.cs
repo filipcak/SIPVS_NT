@@ -48,6 +48,8 @@ namespace SIPVS_NT.Pages
     }
 
 
+    
+    
     public class ValidationModel : PageModel
     {
         // Folder path where the files are located
@@ -684,6 +686,72 @@ namespace SIPVS_NT.Pages
                     }
                 }
             }
+            
+            
+            // check ds:Manifest elements
+            IEnumerable<XElement> manifestElements = xmlDoc.XPathSelectElements("//ds:Manifest", namespaceId);
+
+            foreach (XElement manifestElement in manifestElements)
+            {
+                // id atribut
+                XAttribute idAttribute = manifestElement.Attribute("Id");
+                if (idAttribute == null)
+                {
+                    Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing Id attribute");
+                    return false;
+                }
+                
+                // ds:Transforms
+                XElement transformsElement = manifestElement.Element(namespaceId + "Transforms");
+                if (transformsElement == null)
+                {
+                    Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:Transforms element");
+                    return false;
+                }
+                
+                // ds:DigestMethod
+                XElement digestMethodElement = manifestElement.Element(namespaceId + "DigestMethod");
+                if (digestMethodElement == null)
+                {
+                    Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:DigestMethod element");
+                    return false;
+                }
+
+                string[] SUPPORTED_DIGEST_ALGORITHMS =
+                {
+                    "http://www.w3.org/2000/09/xmldsig#sha1",
+                    "http://www.w3.org/2001/04/xmldsig-more#sha224",
+                    "http://www.w3.org/2001/04/xmlenc#sha256",
+                    "https://www.w3.org/2001/04/xmldsig-more#sha384",
+                    "http://www.w3.org/2001/04/xmlenc#sha512"
+                };
+                
+                string digestAlgorithm = digestMethodElement.Attribute("Algorithm")?.Value;
+                if (!SUPPORTED_DIGEST_ALGORITHMS.Contains(digestAlgorithm))
+                {
+                    Console.WriteLine($"File: {filePath} Error: Unsupported digest algorithm in ds:DigestMethod");
+                    return false;
+                }
+                
+                // TODO
+                // overenie hodnoty Type atribútu voči profilu XAdES_ZEP
+                XAttribute typeAttribute = manifestElement.Attribute("Type");
+                if (typeAttribute == null || !typeAttribute.Value.Equals("XAdES_ZEPXAdES_ZEPXAdES_ZEPXAdES_ZEPXAdES_ZEP"))
+                {
+                    Console.WriteLine($"File: {filePath} Error: Type attribute in ds:Manifest element does not match the expected value");
+                    return false;
+                }
+                
+                // prave jedna referencia
+                XElement objectReferenceElement = manifestElement.Elements(namespaceId + "Reference").FirstOrDefault();
+                if (objectReferenceElement == null || objectReferenceElement.Elements(namespaceId + "Object").Count() != 1)
+                {
+                    Console.WriteLine($"File: {filePath} Error: ds:Manifest element must contain exactly one reference to ds:Object");
+                    return false;
+                }
+
+            }
+            // check ds:Manifest elements references
             return true;
         }
 
