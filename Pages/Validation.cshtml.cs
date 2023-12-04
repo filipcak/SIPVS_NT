@@ -452,7 +452,10 @@ namespace SIPVS_NT.Pages
             // ds:Signature check Id attribute 
             string dsSignatureId = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureId == null)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje Id");
                 return false;
+            }
             
             XElement dsSignatureElement = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId);
             if (dsSignatureElement == null)
@@ -460,23 +463,27 @@ namespace SIPVS_NT.Pages
             
             // ds:Signature check namespace xmlns:ds attribute
             XAttribute xmlnsDsAttribute = dsSignatureElement.Attribute(XNamespace.Xmlns + "ds");
-            Console.WriteLine($"Error logging: {xmlnsDsAttribute}");
             if (xmlnsDsAttribute == null)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje specifikovany namespace xmlns:ds");
                 return false;
+            }
             
             // ds:SignatureValue check Id attribute
             string dsSignatureValueId = xmlDoc.XPathSelectElement("//ds:SignatureValue", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureValueId == null)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignatureValue neobsahuje Id");
                 return false;
+            }
             
-            
-            string SignatureProperties = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId)?.Attribute("Id")?.Value;
-            if (SignatureProperties == null)
-                return false;
-            
-            string SignedProperties = xmlDoc.XPathSelectElement("//xades:SignedProperties", namespaceId)?.Attribute("Id")?.Value;
-            if (SignedProperties == null)
-                return false;
+            // string SignatureProperties = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId)?.Attribute("Id")?.Value;
+            // if (SignatureProperties == null)
+            //     return false;
+            //
+            // string SignedProperties = xmlDoc.XPathSelectElement("//xades:SignedProperties", namespaceId)?.Attribute("Id")?.Value;
+            // if (SignedProperties == null)
+            //     return false;
             
             // verification of ds:KeyInfo content
             
@@ -484,30 +491,30 @@ namespace SIPVS_NT.Pages
             XElement keyInfoElement = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId);
             if (keyInfoElement?.Attribute("Id")?.Value == null)
             {
-                Console.WriteLine($"ds:KeyInfo neobsahuje Id");
+                Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
                 return false;
             }
-
+            
             // Check ds:KeyInfo elements
             XElement x509DataElement = keyInfoElement.XPathSelectElement(".//ds:X509Data", namespaceId);
             if (x509DataElement == null)
             {
-                Console.WriteLine($"ds:KeyInfo neobsahuje element ds:X509Data");
+                Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje element ds:X509Data");
                 return false;
             }
             if (x509DataElement.Elements().Count() < 3)
             {
-                Console.WriteLine($"Chýbajú podelementy pre ds:X509Data");
+                Console.WriteLine($"File: {filePath} Error: Chýbajú podelementy pre ds:X509Data");
                 return false;
             }
-
+            
             // Check ds:KeyInfo values
             byte[] bytes;
             var certificate = new X509Certificate2();
             string issuerSerialFirst = "";
             string issuerSerialSecond = "";
             string subjectName = "";
-
+            
             foreach (XElement element in x509DataElement.Elements())
             {
                 switch (element.Name.LocalName)
@@ -527,16 +534,16 @@ namespace SIPVS_NT.Pages
                         break;
                 }
             }
-
+            
             BigInteger hex = BigInteger.Parse(certificate.SerialNumber, NumberStyles.AllowHexSpecifier);
             if (!certificate.Subject.Equals(subjectName))
             {
-                Console.WriteLine($"Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                Console.WriteLine($"File: {filePath} Error: Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
             if (!certificate.Issuer.Equals(issuerSerialFirst))
             {
-                Console.WriteLine($"Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                Console.WriteLine($"File: {filePath} Error: Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
             if (!hex.ToString().Equals(issuerSerialSecond))
@@ -544,7 +551,45 @@ namespace SIPVS_NT.Pages
                 Console.WriteLine($"Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
-
+            
+            // Check ds:SignatureProperties Id
+            XElement signaturePropertiesElement = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId);
+            if (signaturePropertiesElement?.Attribute("Id")?.Value == null)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
+                return false;
+            }
+            
+            // Check ds:SignatureProperties number of elements
+            IEnumerable<XElement> signaturePropertiesChildren = signaturePropertiesElement.Elements();
+            if (signaturePropertiesChildren.Count() < 2)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje dva elementy");
+                return false;
+            }
+            
+            // Check ds:SignatureProperties elements
+            foreach (XElement element in signaturePropertiesChildren)
+            {
+                string name = element.Elements().FirstOrDefault()?.Name.LocalName;
+                if (name == "ProductInfos" || name == "SignatureVersion")
+                {
+                    XAttribute targetAttribute = element.Attribute("Target");
+                   
+                    if (targetAttribute != null)
+                    {
+                        string tmpTargetValue = targetAttribute.Value.Substring(1);
+                        
+                        string SignatureValueId = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId)?.Attribute("Id")?.Value;
+            
+                        if (!tmpTargetValue.Equals(SignatureValueId))
+                        {
+                            Console.WriteLine($"File: {filePath} Error: Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
+                            return false;
+                        }
+                    }
+                }
+            }
             return true;
         }
 
