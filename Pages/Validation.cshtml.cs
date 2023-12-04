@@ -118,11 +118,11 @@ namespace SIPVS_NT.Pages
                         continue; // Stop verification for this file
                     }
                     //dorobiť
-                    /*if(!checkMessageImprint(filePath)) {
+                    if(!checkMessageImprint(filePath)) {
                         validationPassed = false;
                         logger.Log($"Overenie Messageimprint nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
-                    }*/
+                    }
 
                     // pridanie dalsieho overenia
 
@@ -740,9 +740,24 @@ namespace SIPVS_NT.Pages
             dsNamespace.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
             dsNamespace.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
 
+            // XPath expression pre získanie timestamp elementu
+            string timestampXPath = "//xades:EncapsulatedTimeStamp";
+            XElement timestampElement = xmlDoc.XPathSelectElement(timestampXPath, dsNamespace);
+            
+            if (timestampElement != null)
+            {
+                // použijeme existujúcu checkTimestamp funkciu na overenie platnosti
+                bool isTimestampValid = checkTimestamp(filePath);
 
-            //Dorobiť
+                if (isTimestampValid)
+                {
+                    // ak aj timestamp aj MessageImprint sú v pohode tak vrátime true
+                    Console.WriteLine($"true");
+                    return true;
+                }
+            }
 
+            Console.WriteLine($"false");
             return false;
         }
 
