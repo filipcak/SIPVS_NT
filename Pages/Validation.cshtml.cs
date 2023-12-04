@@ -61,6 +61,8 @@ namespace SIPVS_NT.Pages
 
         // Specify the path for the log file
         private readonly string logFilePath = "validation_results.log";
+        private string timestampCrlUrl = "http://test.ditec.sk/TSAServer/crl/dtctsa.crl";
+        private string signCrlUrl = "http://test.ditec.sk/DTCCACrl/DTCCACrl.crl";
 
         // Event handler for the button click
         public IActionResult OnPostLoadFiles()
@@ -82,6 +84,7 @@ namespace SIPVS_NT.Pages
 
                     // Initialize the verification flag
                     bool validationPassed = true;
+
 
                     // Verify conditions one by one
                     // Verification of the data envelope - Overenie dátovej obálky
@@ -114,6 +117,18 @@ namespace SIPVS_NT.Pages
                         logger.Log($"Overenie other elements nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
+                    if (!checkTimestamp(filePath))
+                    {
+                        validationPassed = false;
+                        logger.Log($"Overenie časovej pečiatky nebolo úspešné pre: {filePath}");
+                        continue; // Stop verification for this file
+                    }
+                    //dorobiť
+                    /*if(!checkMessageImprint(filePath)) {
+                        validationPassed = false;
+                        logger.Log($"Overenie Messageimprint nebolo úspešné pre: {filePath}");
+                        continue; // Stop verification for this file
+                    }*/
 
                     // pridanie dalsieho overenia
 
@@ -122,6 +137,8 @@ namespace SIPVS_NT.Pages
                     {
                         logger.Log($"Súbor bol úspešne validovaný: {fileName}");
                     }
+
+
                 }
 
                 // Logic or return a response if needed
@@ -223,26 +240,26 @@ namespace SIPVS_NT.Pages
 
             return true; // All references pass the checks
         }
-        
+
 
         private bool CoreValidation(string filePath)
         {
             XDocument xmlDoc = XDocument.Load(filePath);
-        
+
             var namespaceId = new XmlNamespaceManager(new NameTable());
             namespaceId.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
             namespaceId.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
-        
+
             // Check ds:SignedInfo and ds:Manifest
             var signedInfoN = xmlDoc.XPathSelectElement("//ds:SignedInfo", namespaceId);
             var referenceElements = signedInfoN.XPathSelectElements("//ds:Reference", namespaceId);
-        
+
             // Reference in SignedInfo
             foreach (var reference in referenceElements)
             {
                 // Extract ReferenceURI
                 string referenceURI = reference.Attribute("URI")?.Value?.Substring(1);
-        
+
                 // Extract digestMethod and digestMethodAlgorithm
                 var digestMethod = reference.Element(namespaceId + "DigestMethod");
                 // string digestMethodAlgorithm = digestMethod?.Attribute("Algorithm")?.Value;
@@ -251,17 +268,17 @@ namespace SIPVS_NT.Pages
                 // Extract dsDigestValue
                 string dsDigestValue = reference.XPathSelectElement("ds:DigestValue", namespaceId)
                     ?.Value;
-        
+
                 if (referenceURI.StartsWith("Manifest"))
                 {
                     // Console.WriteLine("dsDigestValue " + dsDigestValue );
-        
+
                     // Get Manifest XML and check DigestValue
                     var manifestElement = xmlDoc.XPathSelectElement($"//ds:Manifest[@Id='{referenceURI}']", namespaceId);
                     if (manifestElement != null)
                     {
                         string manifestXML = manifestElement.ToString();
-        
+
                         // Use MemoryStream to process the Manifest XML
                         using (MemoryStream sManifest =
                                new MemoryStream(System.Text.Encoding.UTF8.GetBytes(manifestXML)))
@@ -270,7 +287,7 @@ namespace SIPVS_NT.Pages
                             XmlDsigC14NTransform transform = new XmlDsigC14NTransform();
                             transform.LoadInput(sManifest);
                             HashAlgorithm hash = null;
-        
+
                             // Select the appropriate hash algorithm based on digestMethodAlgorithm
                             switch (digestMethodAlgorithm)
                             {
@@ -287,15 +304,15 @@ namespace SIPVS_NT.Pages
                                     hash = new SHA512Managed();
                                     break;
                             }
-        
+
                             if (hash == null)
                                 // Incorrect hash algorithm
                                 return false;
-                            
+
                             // Compute the hash and convert it to Base64
                             byte[] digest = transform.GetDigestedOutput(hash);
                             string result = Convert.ToBase64String(digest);
-                            
+
                             if (!result.Equals(dsDigestValue))
                                 // DigestValue does not match with the computation of Manifest
                                 return false;
@@ -303,52 +320,52 @@ namespace SIPVS_NT.Pages
                     }
                 }
             }
-            
+
             // ds:SignedInfo canonicalization
-            
+
             // Check if the ds:X509Certificate element exists in the specified XPath
             var x509CertificateElement =
                 xmlDoc.XPathSelectElement("//ds:KeyInfo/ds:X509Data/ds:X509Certificate", namespaceId);
-            
+
             if (x509CertificateElement == null)
             {
                 // The element ds:X509Data is not present
                 return false;
             }
-            
+
             // Extract the base64-encoded signature certificate from ds:X509Certificate element
             byte[] signatureCertificate = Convert.FromBase64String(x509CertificateElement.Value);
-            
+
             // Extract the base64-encoded signature value
             byte[] signature =
                 Convert.FromBase64String(xmlDoc.XPathSelectElement("//ds:SignatureValue", namespaceId).Value);
-            
+
             // Extract the ds:SignedInfo element
             var signedInfoElement = xmlDoc.XPathSelectElement("//ds:SignedInfo", namespaceId);
-            
+
             // Extract the algorithm used for the digital signature in ds:SignedInfo
             string signedInfoSignatureAlg = signedInfoElement.XPathSelectElement("ds:SignatureMethod", namespaceId)
                 .Attribute("Algorithm").Value;
-            
+
             // Apply canonicalization to the ds:SignedInfo element
             XmlDsigC14NTransform canonicalizationTransform = new XmlDsigC14NTransform(false);
             XmlDocument signedInfoDocument = new XmlDocument();
             signedInfoDocument.LoadXml(signedInfoElement.ToString());
             canonicalizationTransform.LoadInput(signedInfoDocument);
             byte[] canonicalizedData = ((MemoryStream)canonicalizationTransform.GetOutput()).ToArray();
-            
+
             string errMsg = "";
-            
+
             // Verify the signature using the extracted data and algorithms
             bool verificationResult = this.VerifySignature(signatureCertificate, signature, canonicalizedData,
                 signedInfoSignatureAlg, out errMsg);
-            
+
             if (!verificationResult)
             {
                 Console.WriteLine("Error " + errMsg);
                 return false;
             }
-            
+
             // All references passed the validation
             return true;
         }
@@ -357,7 +374,7 @@ namespace SIPVS_NT.Pages
             out string errorMessage)
         {
             errorMessage = "";
-        
+
             try
             {
                 Org.BouncyCastle.Asn1.X509.SubjectPublicKeyInfo publicKeyInfo = Org.BouncyCastle.Asn1.X509
@@ -365,32 +382,32 @@ namespace SIPVS_NT.Pages
                     .GetInstance(Org.BouncyCastle.Asn1.Asn1Object.FromByteArray(certificateData)).SubjectPublicKeyInfo;
                 Org.BouncyCastle.Crypto.AsymmetricKeyParameter publicKey =
                     Org.BouncyCastle.Security.PublicKeyFactory.CreateKey(publicKeyInfo);
-        
+
                 // Determine hash algorithm
                 string hashAlgorithm = GetHashAlgorithm(signatureAlgorithm);
-        
+
                 // Determine signature algorithm
                 string fullSignatureAlgorithm =
                     GetFullSignatureAlgorithm(publicKeyInfo.AlgorithmID.ObjectID.Id, hashAlgorithm);
-        
+
                 // Hash digest before decryption: Convert.ToBase64String(data));
-        
+
                 Org.BouncyCastle.Crypto.ISigner verifier =
                     Org.BouncyCastle.Security.SignerUtilities.GetSigner(fullSignatureAlgorithm);
                 verifier.Init(false, publicKey);
                 verifier.BlockUpdate(data, 0, data.Length);
                 bool result = verifier.VerifySignature(signature);
-        
+
                 // Public Key value:  publicKey.GetHashCode());
                 // Hash digest after decryption: Convert.ToBase64String(data)
                 // Result result
-        
+
                 if (!result)
                 {
                     errorMessage =
                         $"VerifySignature=false: DataB64={Convert.ToBase64String(data)}{Environment.NewLine}SignatureB64={Convert.ToBase64String(signature)}{Environment.NewLine}CertificateDataB64={Convert.ToBase64String(certificateData)}";
                 }
-        
+
                 return false;
             }
             catch (Exception ex)
@@ -399,7 +416,7 @@ namespace SIPVS_NT.Pages
                 return false;
             }
         }
-        
+
         private string GetHashAlgorithm(string signatureAlgorithm)
         {
             switch (signatureAlgorithm)
@@ -416,7 +433,7 @@ namespace SIPVS_NT.Pages
                     return string.Empty;
             }
         }
-        
+
         private string GetFullSignatureAlgorithm(string algorithmId, string hashAlgorithm)
         {
             switch (algorithmId)
@@ -433,41 +450,156 @@ namespace SIPVS_NT.Pages
         {
             // Load XML content from the file
             XDocument xmlDoc = XDocument.Load(filePath);
-            
+
             var namespaceId = new XmlNamespaceManager(new NameTable());
             namespaceId.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
             namespaceId.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
-            
+
             string dsSignatureId = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureId == null)
                 return false;
-            
+
             XElement dsSignatureElement = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId);
             if (dsSignatureElement == null)
                 return false;
-            
+
             XAttribute xmlnsDsAttribute = dsSignatureElement.Attribute(XNamespace.Xmlns + "ds");
             Console.WriteLine($"Error logging: {xmlnsDsAttribute}");
-            if ( xmlnsDsAttribute == null)
+            if (xmlnsDsAttribute == null)
                 return false;
- 
+
             string dsSignatureValueId = xmlDoc.XPathSelectElement("//ds:SignatureValue", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureValueId == null)
                 return false;
-            
+
             string KeyInfo = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId)?.Attribute("Id")?.Value;
             if (KeyInfo == null)
                 return false;
-            
+
             string SignatureProperties = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId)?.Attribute("Id")?.Value;
             if (SignatureProperties == null)
                 return false;
-            
+
             string SignedProperties = xmlDoc.XPathSelectElement("//xades:SignedProperties", namespaceId)?.Attribute("Id")?.Value;
             if (SignedProperties == null)
                 return false;
-            
+
             return true;
+        }
+
+        private bool checkTimestamp(string filePath)
+        {
+            bool isCertValid = true;
+            // Load XML content from the file
+            XDocument xmlDoc = XDocument.Load(filePath);
+            Org.BouncyCastle.X509.X509Crl timestampCrl = GetTimestampCert();
+
+            var namespaceId = new XmlNamespaceManager(new NameTable());
+            namespaceId.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+            namespaceId.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
+
+            // XPath vyraz na ziskanie certifikatu
+            string xpathExpression = "//ds:X509Certificate";
+            XElement x509CertElement = xmlDoc.XPathSelectElement(xpathExpression, namespaceId);
+
+            if (x509CertElement != null)
+            {
+                // Zakodovany certifikat v Base64
+                string base64Cert = x509CertElement.Value;
+
+                // Dekódovanie Base64 reťazca na pole bytov
+                byte[] certBytes = Convert.FromBase64String(base64Cert);
+
+                // Vytvorenie X509Certificate objektu z dekódovaných bytov
+                Org.BouncyCastle.X509.X509CertificateParser certParser = new Org.BouncyCastle.X509.X509CertificateParser();
+                Org.BouncyCastle.X509.X509Certificate x509Certificate = certParser.ReadCertificate(new MemoryStream(certBytes));
+                // Overenie platnosti certifikátu časovej pečiatky voči času UtcNow
+                isCertValid = x509Certificate.NotBefore <= DateTime.UtcNow && DateTime.UtcNow <= x509Certificate.NotAfter;
+                if (isCertValid)
+                {
+                    // Overenie platnosti certifikátu časovej pečiatky voči platnému poslednému CRL
+                    isCertValid = !timestampCrl.IsRevoked(x509Certificate);
+                }
+
+            }
+            else
+            {
+                isCertValid = false;
+            }
+
+            return isCertValid;
+        }
+
+        private bool checkMessageImprint(string filePath)
+        {
+            // Load XML content from the file
+            XDocument xmlDoc = XDocument.Load(filePath);
+
+
+            var dsNamespace = new XmlNamespaceManager(new NameTable());
+            dsNamespace.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+            dsNamespace.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
+
+
+            //Dorobiť
+
+            return false;
+        }
+
+        public Org.BouncyCastle.X509.X509Crl GetTimestampCert()
+        {
+            try
+            {
+                using (System.Net.WebClient client = new System.Net.WebClient())
+                {
+                    // Stiahnite CRL zo zadaného URL
+                    byte[] crlBytes = client.DownloadData(timestampCrlUrl);
+                    if (crlBytes != null)
+                    {
+                        Org.BouncyCastle.X509.X509CrlParser crlParser = new Org.BouncyCastle.X509.X509CrlParser();
+                        Org.BouncyCastle.X509.X509Crl crl = crlParser.ReadCrl(new MemoryStream(crlBytes));
+                        return crl;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Nepodarilo sa stiahnuť CRL.");
+                        return null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Chyba pri sťahovaní CRL: {ex.Message}");
+                return null;
+            }
+        }
+
+        public Org.BouncyCastle.X509.X509Crl GetSignCert()
+        {
+            try
+            {
+                using (System.Net.WebClient client = new System.Net.WebClient())
+                {
+                    // Stiahnite CRL zo zadaného URL
+                    byte[] crlBytes = client.DownloadData(signCrlUrl);
+                    if (crlBytes != null)
+                    {
+                        Org.BouncyCastle.X509.X509CrlParser crlParser = new Org.BouncyCastle.X509.X509CrlParser();
+                        Org.BouncyCastle.X509.X509Crl crl = crlParser.ReadCrl(new MemoryStream(crlBytes));
+                        return crl;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Nepodarilo sa stiahnuť CRL.");
+                        return null;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Chyba pri sťahovaní CRL: {ex.Message}");
+                return null;
+            }
         }
     }
 }
