@@ -699,7 +699,7 @@ namespace SIPVS_NT.Pages
             namespaceId.AddNamespace("xades", "http://uri.etsi.org/01903/v1.3.2#");
 
             // XPath vyraz na ziskanie certifikatu
-            string xpathExpression = "//ds:X509Certificate";
+            string xpathExpression = "//xades:EncapsulatedTimeStamp";
             XElement x509CertElement = xmlDoc.XPathSelectElement(xpathExpression, namespaceId);
 
             if (x509CertElement != null)
