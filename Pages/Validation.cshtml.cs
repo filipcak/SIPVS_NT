@@ -96,7 +96,7 @@ namespace SIPVS_NT.Pages
                         logger.Log($"Overenie XML Signature nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
-
+                    
                     // Verification Core Validation 
                     if (!CoreValidation(filePath))
                     {
@@ -477,13 +477,107 @@ namespace SIPVS_NT.Pages
                 return false;
             }
             
-            // string SignatureProperties = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId)?.Attribute("Id")?.Value;
-            // if (SignatureProperties == null)
-            //     return false;
-            //
-            // string SignedProperties = xmlDoc.XPathSelectElement("//xades:SignedProperties", namespaceId)?.Attribute("Id")?.Value;
-            // if (SignedProperties == null)
-            //     return false;
+            XElement signedInfoElement = xmlDoc.XPathSelectElement("//ds:SignedInfo", namespaceId);
+            IEnumerable<XElement> dsReferenceNodes = signedInfoElement.XPathSelectElements(".//ds:Reference", namespaceId);
+            
+
+            if (dsReferenceNodes == null || dsReferenceNodes.Count() < 1)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignedInfo neobsahuje ds:Reference");
+                return false;
+            }
+            
+            string keyInfoUri = "";
+            string signaturePropertiesUri = "";
+            string signedPropertiesUri = "";
+            List<string> manifestUris = new List<string>();
+            
+            
+            foreach (XElement referenceNode in dsReferenceNodes)
+            {
+                if (referenceNode.Attribute("Id") == null)
+                {
+                    Console.WriteLine($"File: {filePath} Error: ds:Reference neobsahuje Id");
+                    continue;
+                }
+               
+                string uriType = referenceNode.Attribute("Type")?.Value;
+                if (uriType != null)
+                {
+                    string uriValue = referenceNode.Attribute("URI")?.Value.Substring(1);
+                    
+                    if (uriType.Contains("Object")) {
+                        keyInfoUri = uriValue;
+                    }
+                    else if (uriType.Contains("SignatureProperties")) {
+                        signaturePropertiesUri = uriValue;
+                    }
+                    else if (uriType.Contains("SignedProperties")) {
+                        signedPropertiesUri = uriValue;
+                    }
+                    else if (uriType.Contains("Manifest")) {
+                        manifestUris.Add(uriValue);
+                    }
+                }
+            }
+            
+            XElement KeyInfoElement = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId);
+            XElement SignaturePropertiesElement = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId);
+            XElement SignedPropertiesElement = xmlDoc.XPathSelectElement("//xades:SignedProperties", namespaceId);
+            
+            if (KeyInfoElement.Attribute("Id")?.Value == null)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
+                return false;
+            }
+            if (!KeyInfoElement.Attribute("Id").Value.Equals(keyInfoUri))
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:Keyinfo nezhoduje sa Id s URI");
+                return false;
+            }
+            
+            if (SignaturePropertiesElement.Attribute("Id")?.Value == null)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
+                return false;
+            }
+            
+            if (!SignaturePropertiesElement.Attribute("Id").Value.Equals(signaturePropertiesUri))
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
+                return false;
+            }
+            
+            if (SignedPropertiesElement.Attribute("Id")?.Value == null)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignedProperties neobsahuje Id");
+                return false;
+            }
+            
+            if (!SignedPropertiesElement.Attribute("Id").Value.Equals(signedPropertiesUri))
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
+                return false;
+            }
+            
+            // Check attributes of ds:Manifest
+            IEnumerable<XElement> elementManifestNodes = xmlDoc.XPathSelectElements("//ds:Manifest", namespaceId);
+            
+            bool flag = false;
+            foreach (XElement oneManifest in elementManifestNodes)
+            {
+                foreach(string manifestURI in manifestUris)
+                {
+                    if (oneManifest.Attribute("Id") == null || !oneManifest.Attribute("Id").Value.Equals(manifestURI))
+                        flag = true;
+                }
+            }
+
+            if (!flag)
+            {
+                Console.WriteLine($"File: {filePath} Error: ds:Manifest sa zhoduje sa Id s URI");
+                return false;
+            }
             
             // verification of ds:KeyInfo content
             
