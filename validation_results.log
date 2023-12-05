@@ -1,0 +1,58 @@
+
+--------------------------------------------------
+Validácia súboru: 01XadesT.xml
+Overenie dátovej obálky nebolo úspešné - neplatná hodnota atribútu xmlns:xzep v koreňovom prvku.
+
+--------------------------------------------------
+Validácia súboru: 02XadesT.xml
+Overenie XML Signature: ds:SignatureMethod - nepodporovaný transformačný algoritmus
+
+--------------------------------------------------
+Validácia súboru: 03XadesT.xml
+Overenie XML Signature: ds:DigestMethod - nepodporovaný transformačný algoritmus
+
+--------------------------------------------------
+Validácia súboru: 04XadesT.xml
+Overenie Core Validation nebolo úspešné - zlyhalo overenie podpisu
+
+--------------------------------------------------
+Validácia súboru: 05XadesT.xml
+Error pri overovaní elementov - ds:Signature neobsahuje Id
+
+--------------------------------------------------
+Validácia súboru: 06XadesT.xml
+Error pri overovaní elementov - ds:SignatureValue neobsahuje Id
+
+--------------------------------------------------
+Validácia súboru: 07XadesT.xml
+Overenie Core Validation nebolo úspešné - zlyhalo overenie podpisu
+
+--------------------------------------------------
+Validácia súboru: 08XadesT.xml
+Overenie Core Validation nebolo úspešné - Neobsahuje element ds:X509Data
+
+--------------------------------------------------
+Validácia súboru: 09XadesT.xml
+Error pri overovaní elementov - ds:SignaturePropertiesElement nezhoduje sa Id s URI
+
+--------------------------------------------------
+Validácia súboru: 10XadesT.xml
+Overenie Core Validation nebolo úspešné - DigestValue sa nezhoduje s výpočtom Manifest
+
+--------------------------------------------------
+Validácia súboru: 11XadesT.xml
+Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element
+Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element
+Súbor bol úspešne validovaný: 11XadesT.xml
+
+--------------------------------------------------
+Validácia súboru: 12XadesT.xml
+Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element
+Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element
+Súbor bol úspešne validovaný: 12XadesT.xml
+
+--------------------------------------------------
+Validácia súboru: 13XadesT.xml
+Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element
+Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element
+Súbor bol úspešne validovaný: 13XadesT.xml

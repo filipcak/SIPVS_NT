@@ -105,18 +105,18 @@ namespace SIPVS_NT.Pages
                     }
 
                     // Verification Core Validation 
-                    if (!CoreValidation(filePath))
+                    if (!CoreValidation(filePath, logger))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie Core Validation nebolo úspešné ");
+                        //logger.Log($"Overenie Core Validation nebolo úspešné ");
                         continue; // Stop verification for this file
                     }
 
                     // verification of other elements
-                    if (!CheckElements(filePath))
+                    if (!CheckElements(filePath, logger))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie other elements nebolo úspešné pre: {filePath}");
+                        //logger.Log($"Overenie other elements nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
 
@@ -264,7 +264,7 @@ namespace SIPVS_NT.Pages
             return true; // All references pass the checks
         }
 
-        private bool CoreValidation(string filePath)
+        private bool CoreValidation(string filePath, Logger logger)
         {
             // Load XML content from the file
             XmlDocument xmlDoc = new XmlDocument();
@@ -322,9 +322,10 @@ namespace SIPVS_NT.Pages
 
                     if (hash == null)
                     {
-                        Console.WriteLine(
-                            "URI dereferencing, canonicalization of referenced ds:Manifest elements and validation of ds:DigestValue values");
-                        Console.WriteLine($"Incorrect hash algorithm {digestMethodAlgorithm}");
+                        logger.Log($"Overenie Core Validation nebolo úspešné - nesprávny algoritmus hash {digestMethodAlgorithm}");
+                        //Console.WriteLine(
+                        //    "URI dereferencing, canonicalization of referenced ds:Manifest elements and validation of ds:DigestValue values");
+                        //Console.WriteLine($"Incorrect hash algorithm {digestMethodAlgorithm}");
                         return false;
                     }
 
@@ -333,9 +334,10 @@ namespace SIPVS_NT.Pages
 
                     if (!result.Equals(dsDigestValue))
                     {
-                        Console.WriteLine(
-                            "URI dereferencing, canonicalization of referenced ds:Manifest elements and validation of ds:DigestValue values");
-                        Console.WriteLine("DigestValue does not match with the computation of Manifest");
+                        logger.Log($"Overenie Core Validation nebolo úspešné - DigestValue sa nezhoduje s výpočtom Manifest");
+                        //Console.WriteLine(
+                        //    "URI dereferencing, canonicalization of referenced ds:Manifest elements and validation of ds:DigestValue values");
+                        //Console.WriteLine("DigestValue does not match with the computation of Manifest");
                         return false;
                     }
                 }
@@ -347,8 +349,9 @@ namespace SIPVS_NT.Pages
                 xmlDoc.SelectSingleNode(@"//ds:KeyInfo/ds:X509Data/ds:X509Certificate", namespaceId);
             if (x509CertificateElement == null)
             {
-                Console.WriteLine("ds:SignedInfo canonicalization");
-                Console.WriteLine("Neobsahuje element ds:X509Data");
+                logger.Log($"Overenie Core Validation nebolo úspešné - Neobsahuje element ds:X509Data");
+                //Console.WriteLine("ds:SignedInfo canonicalization");
+                //Console.WriteLine("Neobsahuje element ds:X509Data");
                 return false;
             }
 
@@ -378,7 +381,8 @@ namespace SIPVS_NT.Pages
                 out errorMessage);
             if (!resultError)
             {
-                Console.WriteLine("Error " + errorMessage);
+                logger.Log($"Overenie Core Validation nebolo úspešné - zlyhalo overenie podpisu");
+                //Console.WriteLine("Error " + errorMessage);
                 return false;
             }
 
@@ -439,13 +443,13 @@ namespace SIPVS_NT.Pages
                 verif.BlockUpdate(data, 0, data.Length);
                 bool res = verif.VerifySignature(signature);
 
-                Console.WriteLine("Hodnota pk je: " + pk.GetHashCode());
+                //Console.WriteLine("Hodnota pk je: " + pk.GetHashCode());
 
                 // Console.WriteLine("Hash digest po decrypte: " + Convert.ToBase64String(data));
 
-                Console.WriteLine("- ");
-                Console.WriteLine("Hodnota je " + res);
-                Console.WriteLine("- ");
+                //Console.WriteLine("- ");
+                //Console.WriteLine("Hodnota je " + res);
+                //Console.WriteLine("- ");
                 if (!res)
                 {
                     errorMessage = "verifySign 9: VerifySignature=false: dataB64=" + Convert.ToBase64String(data) +
@@ -463,7 +467,7 @@ namespace SIPVS_NT.Pages
             }
         }
 
-        private bool CheckElements(string filePath)
+        private bool CheckElements(string filePath, Logger logger)
         {
             // Load XML content from the file
             XDocument xmlDoc = XDocument.Load(filePath);
@@ -476,19 +480,24 @@ namespace SIPVS_NT.Pages
             string dsSignatureId = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureId == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje Id");
+                logger.Log("Error pri overovaní elementov - ds:Signature neobsahuje Id");
+                //Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje Id");
                 return false;
             }
 
             XElement dsSignatureElement = xmlDoc.XPathSelectElement("//ds:Signature", namespaceId);
             if (dsSignatureElement == null)
+            {
+                logger.Log("padlo to na ds:Signature");
                 return false;
+            }
 
             // ds:Signature check namespace xmlns:ds attribute
             XAttribute xmlnsDsAttribute = dsSignatureElement.Attribute(XNamespace.Xmlns + "ds");
             if (xmlnsDsAttribute == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje specifikovany namespace xmlns:ds");
+                logger.Log("Error pri overovaní elementov - ds:Signature neobsahuje specifikovany namespace xmlns:ds");
+                //Console.WriteLine($"File: {filePath} Error: ds:Signature neobsahuje specifikovany namespace xmlns:ds");
                 return false;
             }
 
@@ -497,7 +506,8 @@ namespace SIPVS_NT.Pages
                 xmlDoc.XPathSelectElement("//ds:SignatureValue", namespaceId)?.Attribute("Id")?.Value;
             if (dsSignatureValueId == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignatureValue neobsahuje Id");
+                logger.Log("Error pri overovaní elementov - ds:SignatureValue neobsahuje Id");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignatureValue neobsahuje Id");
                 return false;
             }
 
@@ -508,7 +518,8 @@ namespace SIPVS_NT.Pages
 
             if (dsReferenceNodes == null || dsReferenceNodes.Count() < 1)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignedInfo neobsahuje ds:Reference");
+                logger.Log("Error pri overovaní elementov - ds:SignedInfo neobsahuje ds:Reference");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignedInfo neobsahuje ds:Reference");
                 return false;
             }
 
@@ -522,7 +533,8 @@ namespace SIPVS_NT.Pages
             {
                 if (referenceNode.Attribute("Id") == null)
                 {
-                    Console.WriteLine($"File: {filePath} Error: ds:Reference neobsahuje Id");
+                    logger.Log("Error pri overovaní elementov - ds:Reference neobsahuje Id");
+                    //Console.WriteLine($"File: {filePath} Error: ds:Reference neobsahuje Id");
                     continue;
                 }
 
@@ -556,37 +568,43 @@ namespace SIPVS_NT.Pages
 
             if (KeyInfoElement.Attribute("Id")?.Value == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
+                logger.Log("Error pri overovaní elementov - ds:KeyInfo neobsahuje Id");
+                //Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
                 return false;
             }
 
             if (!KeyInfoElement.Attribute("Id").Value.Equals(keyInfoUri))
             {
-                Console.WriteLine($"File: {filePath} Error: ds:Keyinfo nezhoduje sa Id s URI");
+                logger.Log("Error pri overovaní elementov - ds:Keyinfo nezhoduje sa Id s URI");
+                //Console.WriteLine($"File: {filePath} Error: ds:Keyinfo nezhoduje sa Id s URI");
                 return false;
             }
 
             if (SignaturePropertiesElement.Attribute("Id")?.Value == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
+                logger.Log("Error pri overovaní elementov - ds:SignatureProperties neobsahuje Id");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
                 return false;
             }
 
             if (!SignaturePropertiesElement.Attribute("Id").Value.Equals(signaturePropertiesUri))
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
+                logger.Log("Error pri overovaní elementov - ds:SignaturePropertiesElement nezhoduje sa Id s URI");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
                 return false;
             }
 
             if (SignedPropertiesElement.Attribute("Id")?.Value == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignedProperties neobsahuje Id");
+                logger.Log("Error pri overovaní elementov - ds:SignedProperties neobsahuje Id");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignedProperties neobsahuje Id");
                 return false;
             }
 
             if (!SignedPropertiesElement.Attribute("Id").Value.Equals(signedPropertiesUri))
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
+                logger.Log("Error pri overovaní elementov - ds:SignaturePropertiesElement nezhoduje sa Id s URI");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignaturePropertiesElement nezhoduje sa Id s URI");
                 return false;
             }
 
@@ -605,7 +623,8 @@ namespace SIPVS_NT.Pages
 
             if (!flag)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:Manifest sa zhoduje sa Id s URI");
+                logger.Log("Error pri overovaní elementov - ds:Manifest sa zhoduje sa Id s URI");
+                //Console.WriteLine($"File: {filePath} Error: ds:Manifest sa zhoduje sa Id s URI");
                 return false;
             }
 
@@ -615,7 +634,8 @@ namespace SIPVS_NT.Pages
             XElement keyInfoElement = xmlDoc.XPathSelectElement("//ds:KeyInfo", namespaceId);
             if (keyInfoElement?.Attribute("Id")?.Value == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
+                logger.Log("Error pri overovaní elementov - ds:KeyInfo neobsahuje Id");
+                //Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje Id");
                 return false;
             }
 
@@ -623,13 +643,15 @@ namespace SIPVS_NT.Pages
             XElement x509DataElement = keyInfoElement.XPathSelectElement(".//ds:X509Data", namespaceId);
             if (x509DataElement == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje element ds:X509Data");
+                logger.Log("Error pri overovaní elementov - ds:KeyInfo neobsahuje element ds:X509Data");
+                //Console.WriteLine($"File: {filePath} Error: ds:KeyInfo neobsahuje element ds:X509Data");
                 return false;
             }
 
             if (x509DataElement.Elements().Count() < 3)
             {
-                Console.WriteLine($"File: {filePath} Error: Chýbajú podelementy pre ds:X509Data");
+                logger.Log("Error pri overovaní elementov - Chýbajú podelementy pre ds:X509Data");
+                //Console.WriteLine($"File: {filePath} Error: Chýbajú podelementy pre ds:X509Data");
                 return false;
             }
 
@@ -663,21 +685,22 @@ namespace SIPVS_NT.Pages
             BigInteger hex = BigInteger.Parse(certificate.SerialNumber, NumberStyles.AllowHexSpecifier);
             if (!certificate.Subject.Equals(subjectName))
             {
-                Console.WriteLine(
-                    $"File: {filePath} Error: Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                logger.Log("Error pri overovaní elementov - Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                //Console.WriteLine( $"File: {filePath} Error: Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
 
             if (!certificate.Issuer.Equals(issuerSerialFirst))
             {
-                Console.WriteLine(
-                    $"File: {filePath} Error: Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                logger.Log("Error pri overovaní elementov - Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                //Console.WriteLine($"File: {filePath} Error: Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
 
             if (!hex.ToString().Equals(issuerSerialSecond))
             {
-                Console.WriteLine($"Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikáte");
+                logger.Log("Error pri overovaní elementov - Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikát");
+                //Console.WriteLine($"Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
 
@@ -685,7 +708,8 @@ namespace SIPVS_NT.Pages
             XElement signaturePropertiesElement = xmlDoc.XPathSelectElement("//ds:SignatureProperties", namespaceId);
             if (signaturePropertiesElement?.Attribute("Id")?.Value == null)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
+                logger.Log("Error pri overovaní elementov - ds:SignatureProperties neobsahuje Id V2");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje Id");
                 return false;
             }
 
@@ -693,7 +717,8 @@ namespace SIPVS_NT.Pages
             IEnumerable<XElement> signaturePropertiesChildren = signaturePropertiesElement.Elements();
             if (signaturePropertiesChildren.Count() < 2)
             {
-                Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje dva elementy");
+                logger.Log("Error pri overovaní elementov - ds:SignatureProperties neobsahuje dva elementy");
+                //Console.WriteLine($"File: {filePath} Error: ds:SignatureProperties neobsahuje dva elementy");
                 return false;
             }
 
@@ -714,8 +739,8 @@ namespace SIPVS_NT.Pages
 
                         if (!tmpTargetValue.Equals(SignatureValueId))
                         {
-                            Console.WriteLine(
-                                $"File: {filePath} Error: Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
+                            logger.Log("Error pri overovaní elementov - Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
+                            //Console.WriteLine( $"File: {filePath} Error: Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
                             return false;
                         }
                     }
@@ -731,7 +756,8 @@ namespace SIPVS_NT.Pages
                 XAttribute idAttribute = manifestElement.Attribute("Id");
                 if (idAttribute == null)
                 {
-                    Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing Id attribute");
+                    logger.Log("Error pri overovaní elementov - ds:Manifest element is missing Id attribute");
+                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing Id attribute");}}
                     return false;
                 }
 
@@ -739,7 +765,8 @@ namespace SIPVS_NT.Pages
                 XElement transformsElement = manifestElement.Element(namespaceId + "Transforms");
                 if (transformsElement == null)
                 {
-                    Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:Transforms element");
+                    logger.Log("Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element");
+                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:Transforms element");}}
                     return false;
                 }
 
@@ -747,8 +774,8 @@ namespace SIPVS_NT.Pages
                 XElement digestMethodElement = manifestElement.Element(namespaceId + "DigestMethod");
                 if (digestMethodElement == null)
                 {
-                    Console.WriteLine(
-                        $"File: {filePath} Error: ds:Manifest element is missing ds:DigestMethod element");
+                    logger.Log("Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element");
+                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:DigestMethod element");}}
                     return false;
                 }
 
@@ -764,7 +791,8 @@ namespace SIPVS_NT.Pages
                 string digestAlgorithm = digestMethodElement.Attribute("Algorithm")?.Value;
                 if (!SUPPORTED_DIGEST_ALGORITHMS.Contains(digestAlgorithm))
                 {
-                    Console.WriteLine($"File: {filePath} Error: Unsupported digest algorithm in ds:DigestMethod");
+                    logger.Log("Error pri overovaní elementov - Unsupported digest algorithm in ds:DigestMethod");
+                    //Console.WriteLine($"File: {filePath} Error: Unsupported digest algorithm in ds:DigestMethod");}}
                     return false;
                 }
 
@@ -774,8 +802,8 @@ namespace SIPVS_NT.Pages
                 if (typeAttribute == null ||
                     !typeAttribute.Value.Equals("XAdES_ZEPXAdES_ZEPXAdES_ZEPXAdES_ZEPXAdES_ZEP"))
                 {
-                    Console.WriteLine(
-                        $"File: {filePath} Error: Type attribute in ds:Manifest element does not match the expected value");
+                    logger.Log("Error pri overovaní elementov - Type attribute in ds:Manifest element does not match the expected value");
+                    //Console.WriteLine($"File: {filePath} Error: Type attribute in ds:Manifest element does not match the expected value");}}
                     return false;
                 }
 
@@ -784,8 +812,8 @@ namespace SIPVS_NT.Pages
                 if (objectReferenceElement == null ||
                     objectReferenceElement.Elements(namespaceId + "Object").Count() != 1)
                 {
-                    Console.WriteLine(
-                        $"File: {filePath} Error: ds:Manifest element must contain exactly one reference to ds:Object");
+                    logger.Log("Error pri overovaní elementov - ds:Manifest element must contain exactly one reference to ds:Object");
+                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element must contain exactly one reference to ds:Object");}}
                     return false;
                 }
             }
