@@ -1,9 +1,2 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ucastnici xmlns="http://SIPVS_I_NT_ucastnici_skupina_6">
-   <ucastnik email="example@test.com">
-      <meno>Lada</meno>
-      <priezvisko>Matveeva</priezvisko>
-      <datum_narodenia>2014-12-30</datum_narodenia>
-      <vek>8</vek>
-   </ucastnik>
-</ucastnici>
+<ucastnici xmlns="http://SIPVS_I_NT_ucastnici_skupina_6" />

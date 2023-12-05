@@ -75,24 +75,32 @@ namespace SIPVS_NT.Pages
                 {
                     // get file name
                     string fileName = Path.GetFileName(filePath);
-
+                    logger.Log("\n--------------------------------------------------");
+                    logger.Log($"Validácia súboru: {fileName}");
+                    
                     // Initialize the verification flag
                     bool validationPassed = true;
 
                     // Verify conditions one by one
                     // Verification of the data envelope - Overenie dátovej obálky
-                    if (!DataEnvelope(filePath))
+                    if (!DataEnvelope(filePath, "xzep", "http://www.ditec.sk/ep/signature_formats/xades_zep/v1.0"))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie dátovej obálky nebolo úspešné pre: {filePath}");
+                        logger.Log($"Overenie dátovej obálky nebolo úspešné - neplatná hodnota atribútu xmlns:xzep v koreňovom prvku.");
+                        continue; // Stop verification for this file
+                    }
+                    if (!DataEnvelope(filePath, "ds", "http://www.w3.org/2000/09/xmldsig#"))
+                    {
+                        validationPassed = false;
+                        logger.Log($"Overenie dátovej obálky nebolo úspešné - neplatná hodnota atribútu xmlns:ds v koreňovom prvku.");
                         continue; // Stop verification for this file
                     }
 
                     // Verification XML Signature 
-                    if (!Signature(filePath))
+                    if (!Signature(filePath, logger))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie XML Signature nebolo úspešné pre: {filePath}");
+                        //logger.Log($"Overenie XML Signature nebolo úspešné pre: {filePath}");
                         continue; // Stop verification for this file
                     }
 
@@ -100,7 +108,7 @@ namespace SIPVS_NT.Pages
                     if (!CoreValidation(filePath))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie Core Validation nebolo úspešné pre: {filePath}");
+                        logger.Log($"Overenie Core Validation nebolo úspešné ");
                         continue; // Stop verification for this file
                     }
 
@@ -154,21 +162,24 @@ namespace SIPVS_NT.Pages
         }
 
         // Method for verifying the data envelope - Overenie dátovej obálky
-        private bool DataEnvelope(string filePath)
+        private bool DataEnvelope(string filePath, string prefix, string expectedUri)
         {
             // Load XML content from the file
             XDocument xmlDoc = XDocument.Load(filePath);
             // Get the root element
             XElement rootElement = xmlDoc.Root;
+            
+            XAttribute namespaceAttribute = rootElement.Attribute(XNamespace.Xmlns + prefix);
 
-            // Check if the root element is not null and contains the required attributes
-            return rootElement != null &&
-                   rootElement.Attribute(XNamespace.Xmlns + "xzep") != null &&
-                   rootElement.Attribute(XNamespace.Xmlns + "ds") != null;
+            if (namespaceAttribute == null || namespaceAttribute.Value != expectedUri)
+            {
+                return false;
+            }
+            return true;
         }
 
         // Method for verifying the XML Signature
-        private bool Signature(string filePath)
+        private bool Signature(string filePath, Logger logger)
         {
             string[] SUPPORTED_SIGNATURE_ALGORITHMS =
             {
@@ -210,14 +221,15 @@ namespace SIPVS_NT.Pages
 
             if (!SUPPORTED_SIGNATURE_ALGORITHMS.Contains(signatureMethodAlgorithm))
             {
-                Console.WriteLine($"XML Signature Verification: ds:SignatureMethod Unsupported transform algorithm");
+                logger.Log($"Overenie XML Signature: ds:SignatureMethod - nepodporovaný transformačný algoritmus");
+                //Console.WriteLine($"XML Signature Verification: ds:SignatureMethod Unsupported transform algorithm");
                 return false;
             }
 
             if (canonicalizationMethodAlgorithm != "http://www.w3.org/TR/2001/REC-xml-c14n-20010315")
             {
-                Console.WriteLine(
-                    $"XML Signature Verification: ds:CanonicalizationMethod Unsupported transform algorithm");
+                logger.Log($"Overenie XML Signature: ds:CanonicalizationMethod - nepodporovaný transformačný algoritmus");
+                //Console.WriteLine($"XML Signature Verification: ds:CanonicalizationMethod Unsupported transform algorithm");
                 return false;
             }
 
@@ -233,8 +245,8 @@ namespace SIPVS_NT.Pages
                     string transformAlgorithm = transform.Attribute("Algorithm")?.Value;
                     if (!SUPPORTED_TRANSFORM_ALGORITHMS.Contains(transformAlgorithm))
                     {
-                        Console.WriteLine(
-                            $"XML Signature Verification:  ds:Transforms Unsupported transform algorithm");
+                        logger.Log($"Overenie XML Signature: ds:Transforms - nepodporovaný transformačný algoritmus");
+                        //Console.WriteLine($"XML Signature Verification:  ds:Transforms Unsupported transform algorithm");
                         return false; // Unsupported transform algorithm found
                     }
                 }
@@ -244,11 +256,11 @@ namespace SIPVS_NT.Pages
                     ?.Attribute("Algorithm")?.Value;
                 if (!SUPPORTED_DIGEST_ALGORITHMS.Contains(digestAlgorithm))
                 {
-                    Console.WriteLine($"XML Signature Verification: ds:DigestMethod Unsupported digest algorithm");
+                    logger.Log($"Overenie XML Signature: ds:DigestMethod - nepodporovaný transformačný algoritmus");
+                    //Console.WriteLine($"XML Signature Verification: ds:DigestMethod Unsupported digest algorithm");
                     return false;
                 }
             }
-
             return true; // All references pass the checks
         }
 
