@@ -796,14 +796,13 @@ namespace SIPVS_NT.Pages
                     return false;
                 }
 
-                // TODO
                 // overenie hodnoty Type atribútu voči profilu XAdES_ZEP
                 XAttribute typeAttribute = manifestElement.Attribute("Type");
+                XElement typeAttributeElement = xmlDoc.XPathSelectElement("//xades:Type", namespaceId);
                 if (typeAttribute == null ||
-                    !typeAttribute.Value.Equals("XAdES_ZEPXAdES_ZEPXAdES_ZEPXAdES_ZEPXAdES_ZEP"))
+                    !typeAttribute.Value.Equals(typeAttributeElement))
                 {
                     logger.Log("Error pri overovaní elementov - Type attribute in ds:Manifest element does not match the expected value");
-                    //Console.WriteLine($"File: {filePath} Error: Type attribute in ds:Manifest element does not match the expected value");}}
                     return false;
                 }
 
