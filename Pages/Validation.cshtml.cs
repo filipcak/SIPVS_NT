@@ -123,21 +123,21 @@ namespace SIPVS_NT.Pages
                     if (!checkTimestamp(filePath))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie časovej pečiatky nebolo úspešné pre: {filePath}");
+                        logger.Log($"Overenie časovej pečiatky nebolo úspešné.");
                         continue; // Stop verification for this file
                     }
 
                     if (!checkMessageImprint(filePath))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie Messageimprint nebolo úspešné pre: {filePath}");
+                        logger.Log($"Overenie Messageimprint nebolo úspešné voči podpisu.");
                         continue; // Stop verification for this file
                     }
 
                     if (!checkSignCert(filePath))
                     {
                         validationPassed = false;
-                        logger.Log($"Overenie platnosti podpisového certifikátu nebolo úspešné pre: {filePath}");
+                        logger.Log($"Overenie platnosti podpisového certifikátu nebolo úspešné.");
                         continue; // Stop verification for this file
                     }
 
@@ -151,7 +151,7 @@ namespace SIPVS_NT.Pages
                 }
 
                 // Logic or return a response if needed
-                return Content("<script>alert('Process finished'); window.location.href='/Validation'</script>",
+                return Content("<script>alert('Validacia je dokoncena.'); window.location.href='/Validation'</script>",
                     "text/html");
             }
             catch (Exception ex)
@@ -774,7 +774,7 @@ namespace SIPVS_NT.Pages
                 XElement digestMethodElement = manifestElement.Element(namespaceId + "DigestMethod");
                 if (digestMethodElement == null)
                 {
-                    logger.Log("Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element");
+                    logger.Log("Error pri overovaní elementov - ds:Manifest elementu chýba ds:DigestMethod element");
                     //Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:DigestMethod element");}}
                     return false;
                 }
@@ -791,7 +791,7 @@ namespace SIPVS_NT.Pages
                 string digestAlgorithm = digestMethodElement.Attribute("Algorithm")?.Value;
                 if (!SUPPORTED_DIGEST_ALGORITHMS.Contains(digestAlgorithm))
                 {
-                    logger.Log("Error pri overovaní elementov - Unsupported digest algorithm in ds:DigestMethod");
+                    logger.Log("Error pri overovaní elementov - nepodporovaný digest algoritmus v ds:DigestMethod");
                     //Console.WriteLine($"File: {filePath} Error: Unsupported digest algorithm in ds:DigestMethod");}}
                     return false;
                 }
@@ -802,7 +802,7 @@ namespace SIPVS_NT.Pages
                 if (typeAttribute == null ||
                     !typeAttribute.Value.Equals(typeAttributeElement))
                 {
-                    logger.Log("Error pri overovaní elementov - Type attribute in ds:Manifest element does not match the expected value");
+                    logger.Log("Error pri overovaní elementov - atribút v ds:Manifest element sa nezhoduje s očakávanou hodnotou");
                     return false;
                 }
 
@@ -811,7 +811,7 @@ namespace SIPVS_NT.Pages
                 if (objectReferenceElement == null ||
                     objectReferenceElement.Elements(namespaceId + "Object").Count() != 1)
                 {
-                    logger.Log("Error pri overovaní elementov - ds:Manifest element must contain exactly one reference to ds:Object");
+                    logger.Log("Error pri overovaní elementov - ds:Manifest element musí obsahovať presne jednu referenciu na ds:Object");
                     //Console.WriteLine($"File: {filePath} Error: ds:Manifest element must contain exactly one reference to ds:Object");}}
                     return false;
                 }

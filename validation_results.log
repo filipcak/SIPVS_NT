@@ -42,17 +42,11 @@ Overenie Core Validation nebolo úspešné - DigestValue sa nezhoduje s výpočt
 --------------------------------------------------
 Validácia súboru: 11XadesT.xml
 Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element
-Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element
-Súbor bol úspešne validovaný: 11XadesT.xml
 
 --------------------------------------------------
 Validácia súboru: 12XadesT.xml
 Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element
-Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element
-Súbor bol úspešne validovaný: 12XadesT.xml
 
 --------------------------------------------------
 Validácia súboru: 13XadesT.xml
 Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element
-Error pri overovaní elementov - ds:Manifest element is missing ds:DigestMethod element
-Súbor bol úspešne validovaný: 13XadesT.xml
