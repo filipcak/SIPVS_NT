@@ -58,6 +58,42 @@ namespace SIPVS_NT.Pages
         private string timestampCrlUrl = "http://test.ditec.sk/TSAServer/crl/dtctsa.crl";
         private string signCrlUrl = "http://test.ditec.sk/DTCCACrl/DTCCACrl.crl";
 
+        public IActionResult OnPostLoadFile(IFormFile uploadedFile)
+        {
+            if (uploadedFile != null && uploadedFile.Length > 0)
+            {
+                // Determine a temporary folder path
+                string tempFolderPath = Path.Combine(Path.GetTempPath(), "signatures_temp");
+
+                // Ensure the folder exists, create it if not
+                if (!Directory.Exists(tempFolderPath))
+                {
+                    Directory.CreateDirectory(tempFolderPath);
+                }
+
+                // Construct the full path for saving the file temporarily
+                string tempFilePath = Path.Combine(tempFolderPath, uploadedFile.FileName);
+
+                // Save the file to the temporary location
+                using (var fileStream = new FileStream(tempFilePath, FileMode.Create))
+                {
+                    uploadedFile.CopyTo(fileStream);
+                }
+                Logger logger = new Logger(logFilePath);
+
+                // Validate the file using the file path
+                Validate(logger, uploadedFile.FileName, tempFilePath);
+
+                return Content($"<script>alert('Validacia sa dokoncila pre {uploadedFile.FileName}'); window.location.href='/Validation'</script>",
+                        "text/html");
+            }
+            else
+            {
+                return Content("<script>alert('Je potrebne nahrat subor.'); window.location.href='/Validation'</script>",
+                    "text/html");;
+            }
+        }
+        
         // Event handler for the button click
         public IActionResult OnPostLoadFiles()
         {
@@ -75,79 +111,7 @@ namespace SIPVS_NT.Pages
                 {
                     // get file name
                     string fileName = Path.GetFileName(filePath);
-                    logger.Log("\n--------------------------------------------------");
-                    logger.Log($"Validácia súboru: {fileName}");
-                    
-                    // Initialize the verification flag
-                    bool validationPassed = true;
-
-                    // Verify conditions one by one
-                    // Verification of the data envelope - Overenie dátovej obálky
-                    if (!DataEnvelope(filePath, "xzep", "http://www.ditec.sk/ep/signature_formats/xades_zep/v1.0"))
-                    {
-                        validationPassed = false;
-                        logger.Log($"Overenie dátovej obálky nebolo úspešné - neplatná hodnota atribútu xmlns:xzep v koreňovom prvku.");
-                        continue; // Stop verification for this file
-                    }
-                    if (!DataEnvelope(filePath, "ds", "http://www.w3.org/2000/09/xmldsig#"))
-                    {
-                        validationPassed = false;
-                        logger.Log($"Overenie dátovej obálky nebolo úspešné - neplatná hodnota atribútu xmlns:ds v koreňovom prvku.");
-                        continue; // Stop verification for this file
-                    }
-
-                    // Verification XML Signature 
-                    if (!Signature(filePath, logger))
-                    {
-                        validationPassed = false;
-                        //logger.Log($"Overenie XML Signature nebolo úspešné pre: {filePath}");
-                        continue; // Stop verification for this file
-                    }
-
-                    // Verification Core Validation 
-                    if (!CoreValidation(filePath, logger))
-                    {
-                        validationPassed = false;
-                        //logger.Log($"Overenie Core Validation nebolo úspešné ");
-                        continue; // Stop verification for this file
-                    }
-
-                    // verification of other elements
-                    if (!CheckElements(filePath, logger))
-                    {
-                        validationPassed = false;
-                        //logger.Log($"Overenie other elements nebolo úspešné pre: {filePath}");
-                        continue; // Stop verification for this file
-                    }
-
-                    if (!checkTimestamp(filePath))
-                    {
-                        validationPassed = false;
-                        logger.Log($"Overenie časovej pečiatky nebolo úspešné.");
-                        continue; // Stop verification for this file
-                    }
-
-                    if (!checkMessageImprint(filePath))
-                    {
-                        validationPassed = false;
-                        logger.Log($"Overenie Messageimprint nebolo úspešné voči podpisu.");
-                        continue; // Stop verification for this file
-                    }
-
-                    if (!checkSignCert(filePath))
-                    {
-                        validationPassed = false;
-                        logger.Log($"Overenie platnosti podpisového certifikátu nebolo úspešné.");
-                        continue; // Stop verification for this file
-                    }
-
-                    // pridanie dalsieho overenia
-
-                    // If all conditions passed, log successful validation
-                    if (validationPassed)
-                    {
-                        logger.Log($"Súbor bol úspešne validovaný: {fileName}");
-                    }
+                    Validate(logger, fileName, filePath);
                 }
 
                 // Logic or return a response if needed
@@ -158,6 +122,90 @@ namespace SIPVS_NT.Pages
             {
                 // Handle exceptions, return an error response
                 return new BadRequestObjectResult($"Error validating signatures: {ex.Message}");
+            }
+        }
+
+        
+        // add here a function for validation
+
+        private void Validate(Logger logger, string fileName, string filePath)
+        {
+            logger.Log("\n--------------------------------------------------");
+            logger.Log($"Validácia súboru: {fileName}");
+
+            // Initialize the verification flag
+            bool validationPassed = true;
+
+
+            // Verify conditions one by one
+            // Verification of the data envelope - Overenie dátovej obálky
+            if (!DataEnvelope(filePath, "xzep", "http://www.ditec.sk/ep/signature_formats/xades_zep/v1.0"))
+            {
+                validationPassed = false;
+                logger.Log(
+                    $"Overenie dátovej obálky nebolo úspešné - neplatná hodnota atribútu xmlns:xzep v koreňovom prvku.");
+                return; // Stop verification for this file
+            }
+
+            if (!DataEnvelope(filePath, "ds", "http://www.w3.org/2000/09/xmldsig#"))
+            {
+                validationPassed = false;
+                logger.Log(
+                    $"Overenie dátovej obálky nebolo úspešné - neplatná hodnota atribútu xmlns:ds v koreňovom prvku.");
+                return; // Stop verification for this file
+            }
+
+            // Verification XML Signature 
+            if (!Signature(filePath, logger))
+            {
+                validationPassed = false;
+                //logger.Log($"Overenie XML Signature nebolo úspešné pre: {filePath}");
+                return; // Stop verification for this file
+            }
+
+            // Verification Core Validation 
+            if (!CoreValidation(filePath, logger))
+            {
+                validationPassed = false;
+                //logger.Log($"Overenie Core Validation nebolo úspešné ");
+                return; // Stop verification for this file
+            }
+
+            // verification of other elements
+            if (!CheckElements(filePath, logger))
+            {
+                validationPassed = false;
+                //logger.Log($"Overenie other elements nebolo úspešné pre: {filePath}");
+                return; // Stop verification for this file
+            }
+
+            if (!checkTimestamp(filePath))
+            {
+                validationPassed = false;
+                logger.Log($"Overenie časovej pečiatky nebolo úspešné.");
+                return; // Stop verification for this file
+            }
+
+            if (!checkMessageImprint(filePath))
+            {
+                validationPassed = false;
+                logger.Log($"Overenie Messageimprint nebolo úspešné voči podpisu.");
+                return; // Stop verification for this file
+            }
+
+            if (!checkSignCert(filePath))
+            {
+                validationPassed = false;
+                logger.Log($"Overenie platnosti podpisového certifikátu nebolo úspešné.");
+                return; // Stop verification for this file
+            }
+
+            // pridanie dalsieho overenia
+
+            // If all conditions passed, log successful validation
+            if (validationPassed)
+            {
+                logger.Log($"Súbor bol úspešne validovaný: {fileName}");
             }
         }
 
