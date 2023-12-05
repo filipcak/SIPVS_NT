@@ -79,21 +79,25 @@ namespace SIPVS_NT.Pages
                 {
                     uploadedFile.CopyTo(fileStream);
                 }
+
                 Logger logger = new Logger(logFilePath);
 
                 // Validate the file using the file path
                 Validate(logger, uploadedFile.FileName, tempFilePath);
 
-                return Content($"<script>alert('Validacia sa dokoncila pre {uploadedFile.FileName}'); window.location.href='/Validation'</script>",
-                        "text/html");
+                return Content(
+                    $"<script>alert('Validacia sa dokoncila pre {uploadedFile.FileName}'); window.location.href='/Validation'</script>",
+                    "text/html");
             }
             else
             {
-                return Content("<script>alert('Je potrebne nahrat subor.'); window.location.href='/Validation'</script>",
-                    "text/html");;
+                return Content(
+                    "<script>alert('Je potrebne nahrat subor.'); window.location.href='/Validation'</script>",
+                    "text/html");
+                ;
             }
         }
-        
+
         // Event handler for the button click
         public IActionResult OnPostLoadFiles()
         {
@@ -125,7 +129,7 @@ namespace SIPVS_NT.Pages
             }
         }
 
-        
+
         // add here a function for validation
 
         private void Validate(Logger logger, string fileName, string filePath)
@@ -216,13 +220,14 @@ namespace SIPVS_NT.Pages
             XDocument xmlDoc = XDocument.Load(filePath);
             // Get the root element
             XElement rootElement = xmlDoc.Root;
-            
+
             XAttribute namespaceAttribute = rootElement.Attribute(XNamespace.Xmlns + prefix);
 
             if (namespaceAttribute == null || namespaceAttribute.Value != expectedUri)
             {
                 return false;
             }
+
             return true;
         }
 
@@ -276,7 +281,8 @@ namespace SIPVS_NT.Pages
 
             if (canonicalizationMethodAlgorithm != "http://www.w3.org/TR/2001/REC-xml-c14n-20010315")
             {
-                logger.Log($"Overenie XML Signature: ds:CanonicalizationMethod - nepodporovaný transformačný algoritmus");
+                logger.Log(
+                    $"Overenie XML Signature: ds:CanonicalizationMethod - nepodporovaný transformačný algoritmus");
                 //Console.WriteLine($"XML Signature Verification: ds:CanonicalizationMethod Unsupported transform algorithm");
                 return false;
             }
@@ -309,6 +315,7 @@ namespace SIPVS_NT.Pages
                     return false;
                 }
             }
+
             return true; // All references pass the checks
         }
 
@@ -370,7 +377,8 @@ namespace SIPVS_NT.Pages
 
                     if (hash == null)
                     {
-                        logger.Log($"Overenie Core Validation nebolo úspešné - nesprávny algoritmus hash {digestMethodAlgorithm}");
+                        logger.Log(
+                            $"Overenie Core Validation nebolo úspešné - nesprávny algoritmus hash {digestMethodAlgorithm}");
                         //Console.WriteLine(
                         //    "URI dereferencing, canonicalization of referenced ds:Manifest elements and validation of ds:DigestValue values");
                         //Console.WriteLine($"Incorrect hash algorithm {digestMethodAlgorithm}");
@@ -382,7 +390,8 @@ namespace SIPVS_NT.Pages
 
                     if (!result.Equals(dsDigestValue))
                     {
-                        logger.Log($"Overenie Core Validation nebolo úspešné - DigestValue sa nezhoduje s výpočtom Manifest");
+                        logger.Log(
+                            $"Overenie Core Validation nebolo úspešné - DigestValue sa nezhoduje s výpočtom Manifest");
                         //Console.WriteLine(
                         //    "URI dereferencing, canonicalization of referenced ds:Manifest elements and validation of ds:DigestValue values");
                         //Console.WriteLine("DigestValue does not match with the computation of Manifest");
@@ -733,21 +742,24 @@ namespace SIPVS_NT.Pages
             BigInteger hex = BigInteger.Parse(certificate.SerialNumber, NumberStyles.AllowHexSpecifier);
             if (!certificate.Subject.Equals(subjectName))
             {
-                logger.Log("Error pri overovaní elementov - Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                logger.Log(
+                    "Error pri overovaní elementov - Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 //Console.WriteLine( $"File: {filePath} Error: Hodnota ds:X509SubjectName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
 
             if (!certificate.Issuer.Equals(issuerSerialFirst))
             {
-                logger.Log("Error pri overovaní elementov - Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
+                logger.Log(
+                    "Error pri overovaní elementov - Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 //Console.WriteLine($"File: {filePath} Error: Hodnota ds:X509IssuerName sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
 
             if (!hex.ToString().Equals(issuerSerialSecond))
             {
-                logger.Log("Error pri overovaní elementov - Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikát");
+                logger.Log(
+                    "Error pri overovaní elementov - Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikát");
                 //Console.WriteLine($"Hodnota ds:X509SerialNumber sa nezhoduje s príslušnou hodnotou v certifikáte");
                 return false;
             }
@@ -787,7 +799,8 @@ namespace SIPVS_NT.Pages
 
                         if (!tmpTargetValue.Equals(SignatureValueId))
                         {
-                            logger.Log("Error pri overovaní elementov - Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
+                            logger.Log(
+                                "Error pri overovaní elementov - Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
                             //Console.WriteLine( $"File: {filePath} Error: Atribut Target v elemente ds:SignatureProperty nie je nastaveny na element ds:Signature");
                             return false;
                         }
@@ -795,37 +808,6 @@ namespace SIPVS_NT.Pages
                 }
             }
 
-            // check ds:Manifest elements
-            IEnumerable<XElement> manifestElements = xmlDoc.XPathSelectElements("//ds:Manifest", namespaceId);
-
-            foreach (XElement manifestElement in manifestElements)
-            {
-                // id atribut
-                XAttribute idAttribute = manifestElement.Attribute("Id");
-                if (idAttribute == null)
-                {
-                    logger.Log("Error pri overovaní elementov - ds:Manifest element is missing Id attribute");
-                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing Id attribute");}}
-                    return false;
-                }
-
-                // ds:Transforms
-                XElement transformsElement = manifestElement.Element(namespaceId + "Transforms");
-                if (transformsElement == null)
-                {
-                    logger.Log("Error pri overovaní elementov - ds:Manifest element is missing ds:Transforms element");
-                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:Transforms element");}}
-                    return false;
-                }
-
-                // ds:DigestMethod
-                XElement digestMethodElement = manifestElement.Element(namespaceId + "DigestMethod");
-                if (digestMethodElement == null)
-                {
-                    logger.Log("Error pri overovaní elementov - ds:Manifest elementu chýba ds:DigestMethod element");
-                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element is missing ds:DigestMethod element");}}
-                    return false;
-                }
 
             string[] SUPPORTED_DIGEST_ALGORITHMS =
             {
@@ -876,7 +858,8 @@ namespace SIPVS_NT.Pages
                     return false;
 
                 // check value attribute Type
-                if (manifestChildNodes[0].Attribute("Type")?.Value.Equals("http://www.w3.org/2000/09/xmldsig#Object") ??
+                if (manifestChildNodes[0].Attribute("Type")?.Value
+                        .Equals("http://www.w3.org/2000/09/xmldsig#Object") ??
                     false)
                 {
                     // check supported ds:Transforms and ds:DigestMethod
@@ -968,9 +951,9 @@ namespace SIPVS_NT.Pages
 
                                     break;
                             }
-                            
-                            Console.WriteLine( $"base64String {base64String}");
-                            Console.WriteLine( $"base64String {digestValue}");
+
+                            Console.WriteLine($"base64String {base64String}");
+                            Console.WriteLine($"base64String {digestValue}");
                         }
                     }
 
@@ -980,15 +963,6 @@ namespace SIPVS_NT.Pages
                             "Error pri overovaní elementov - The reference from ds:Manifest to ds:Object does not match");
                         return false;
                     }
-                // overenie hodnoty Type atribútu voči profilu XAdES_ZEP
-                XAttribute typeAttribute = manifestElement.Attribute("Type");
-                XElement typeAttributeElement = xmlDoc.XPathSelectElement("//xades:Type", namespaceId);
-                if (typeAttribute == null ||
-                    !typeAttribute.Value.Equals(typeAttributeElement))
-                {
-                    logger.Log("Error pri overovaní elementov - atribút v ds:Manifest element sa nezhoduje s očakávanou hodnotou");
-                    return false;
-                }
 
                     error1 = false;
                 }
@@ -996,12 +970,10 @@ namespace SIPVS_NT.Pages
                 {
                     logger.Log(
                         "Error pri overovaní elementov - Type attribute in ds:Manifest element does not match the expected value");
-                    logger.Log("Error pri overovaní elementov - ds:Manifest element musí obsahovať presne jednu referenciu na ds:Object");
-                    //Console.WriteLine($"File: {filePath} Error: ds:Manifest element must contain exactly one reference to ds:Object");}}
                     return false;
                 }
             }
-             
+
             return true;
         }
 
@@ -1136,7 +1108,8 @@ namespace SIPVS_NT.Pages
                     byte[] crlBytes = client.DownloadData(timestampCrlUrl);
                     if (crlBytes != null)
                     {
-                        Org.BouncyCastle.X509.X509CrlParser crlParser = new Org.BouncyCastle.X509.X509CrlParser();
+                        Org.BouncyCastle.X509.X509CrlParser crlParser =
+                            new Org.BouncyCastle.X509.X509CrlParser();
                         Org.BouncyCastle.X509.X509Crl crl = crlParser.ReadCrl(new MemoryStream(crlBytes));
                         return crl;
                     }
@@ -1164,7 +1137,8 @@ namespace SIPVS_NT.Pages
                     byte[] crlBytes = client.DownloadData(signCrlUrl);
                     if (crlBytes != null)
                     {
-                        Org.BouncyCastle.X509.X509CrlParser crlParser = new Org.BouncyCastle.X509.X509CrlParser();
+                        Org.BouncyCastle.X509.X509CrlParser crlParser =
+                            new Org.BouncyCastle.X509.X509CrlParser();
                         Org.BouncyCastle.X509.X509Crl crl = crlParser.ReadCrl(new MemoryStream(crlBytes));
                         return crl;
                     }
